@@ -11,5 +11,6 @@ require (
 	github.com/shibukawa/compints v0.1.0
 	github.com/shibukawa/gocloudurls v1.0.2
 	github.com/stretchr/testify v1.4.0
+	go.opencensus.io v0.22.0
 	gocloud.dev v0.17.0
 )

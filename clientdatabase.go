@@ -88,7 +88,7 @@ func (c Client) postDocument(docID uint32, uniqueKey string, document *Document)
 }
 
 func (c Client) RemoveDocument(uniqueKey string) error {
-	docID, existingDocKey, oldDoc, err := c.findDocumentByID(uniqueKey)
+	docID, existingDocKey, oldDoc, err := c.findDocumentByKey(uniqueKey)
 	if err != nil {
 		return err
 	}
@@ -404,4 +404,109 @@ func (c Client) removeDocumentFromToken(word string, docID uint32) error {
 			return c.tokens.Replace(c.ctx, &newToken)
 		}
 	}
+}
+
+func (c Client) FindTags(tagNames ...string) ([]*Tag, error) {
+	if len(tagNames) == 0 {
+		return nil, nil
+	}
+	existingTags := make([]TagEntity, len(tagNames))
+	actions := c.tags.Actions()
+	for i, tagName := range tagNames {
+		existingTags[i].Tag = tagName
+		actions = actions.Get(&existingTags[i])
+	}
+	err := actions.Do(c.ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*Tag, len(tagNames))
+	for i, existingTag := range existingTags {
+		docIDs, err := compints.DecompressFromBytes(existingTag.DocumentIDs, true)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = &Tag{
+			Tag:         existingTag.Tag,
+			DocumentIDs: docIDs,
+		}
+	}
+	return result, nil
+}
+
+func (c Client) FindTokens(words ...string) ([]*Token, error) {
+	if len(words) == 0 {
+		return nil, nil
+	}
+	existingTokens := make([]TokenEntity, len(words))
+	actions := c.tokens.Actions()
+	for i, word := range words {
+		existingTokens[i].Word = word
+		actions = actions.Get(&existingTokens[i])
+	}
+	err := actions.Do(c.ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*Token, len(words))
+	for i, existingToken := range existingTokens {
+		token := &Token{
+			Word: existingToken.Word,
+		}
+		for _, posting := range existingToken.Postings {
+			positions, err := compints.DecompressFromBytes(posting.Positions, true)
+			if err != nil {
+				return nil, err
+			}
+			token.Postings = append(token.Postings, Posting{
+				DocumentID: posting.DocumentID,
+				Positions:  positions,
+			})
+		}
+		result[i] = token
+	}
+	return result, nil
+}
+
+func (c Client) FindDocuments(ids ...uint32) ([]*Document, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	result := make([]*Document, len(ids))
+	actions := c.documents.Actions()
+	for i, id := range ids {
+		result[i] = &Document{
+			ID: id,
+		}
+		actions = actions.Get(result[i])
+	}
+	err := actions.Do(c.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (c Client) FindDocumentByKey(uniqueKey string) (*Document, error) {
+	_, _, doc, err := c.findDocumentByKey(uniqueKey)
+	return doc, err
+}
+
+func (c Client) findDocumentByKey(uniqueKey string) (uint32, *DocumentKey, *Document, error) {
+	existingDocKey := DocumentKey{
+		UniqueKey: uniqueKey,
+	}
+	err := c.docKeys.Get(c.ctx, &existingDocKey)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	docID := existingDocKey.ID
+	oldDoc := Document{
+		ID: docID,
+	}
+	err = c.documents.Get(c.ctx, &oldDoc)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	return docID, &existingDocKey, &oldDoc, nil
 }

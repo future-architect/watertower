@@ -6,14 +6,15 @@ import (
 
 const (
 	LanguageJapanese = "ja"
-	LanguageEnglish = "en"
+	LanguageEnglish  = "en"
 )
 
 var languages = make(map[string]*Tokenizer)
 
 type Token struct {
-	Word      string
-	Positions []uint32
+	Word       string
+	BeforeStem string
+	Positions  []uint32
 }
 
 func FindTokenizer(lang string) (*Tokenizer, error) {
@@ -57,8 +58,9 @@ func (t Tokenizer) Tokenize(content string) map[string]*Token {
 			token.Positions = append(token.Positions, position)
 		} else {
 			token := &Token{
-				Word:      stemWord,
-				Positions: []uint32{position},
+				Word:       stemWord,
+				BeforeStem: word,
+				Positions:  []uint32{position},
 			}
 			tokens[stemWord] = token
 		}

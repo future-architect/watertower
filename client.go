@@ -80,6 +80,10 @@ func (c *Client) Close() (errors []error) {
 	if err != nil {
 		errors = append(errors, err)
 	}
+	err = c.docKeys.Close()
+	if err != nil {
+		errors = append(errors, err)
+	}
 	err = c.tokens.Close()
 	if err != nil {
 		errors = append(errors, err)

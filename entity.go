@@ -19,8 +19,16 @@ type DocumentKey struct {
 }
 
 type Token struct {
-	Word     string             `json:"word"`
-	Postings map[uint32]Posting `json:"postings"`
+	Word     string    `json:"word"`
+	Postings []Posting `json:"postings"`
+}
+
+func (t Token) toPostingMap() map[uint32]Posting {
+	result := make(map[uint32]Posting)
+	for _, posting := range t.Postings {
+		result[posting.DocumentID] = posting
+	}
+	return result
 }
 
 type TokenEntity struct {

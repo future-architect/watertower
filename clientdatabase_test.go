@@ -63,16 +63,16 @@ func TestClient_PostDocument(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Nil(t, oldDoc)
 
-	loadedDoc, err := client.FindDocument(docID)
+	loadedDocs, err := client.FindDocuments(docID)
 	assert.Nil(t, err)
-	assert.Equal(t, "old title", loadedDoc.Title)
+	assert.Equal(t, "old title", loadedDocs[0].Title)
 
 	doc.Title = "new title"
 	oldDoc, err = client.postDocument(docID, "test", doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", oldDoc.Title)
 
-	loadedDoc, err = client.FindDocumentByKey("test")
+	loadedDoc, err := client.FindDocumentByKey("test")
 	assert.Nil(t, err)
 	assert.Equal(t, "new title", loadedDoc.Title)
 }
@@ -249,8 +249,9 @@ func TestClient_AddDocumentToTag(t *testing.T) {
 	err = client.AddDocumentToTag("tag", 12)
 	assert.Nil(t, err)
 
-	tag, err := client.FindTag("tag")
+	tags, err := client.FindTags("tag")
 	assert.Nil(t, err)
+	tag := tags[0]
 	assert.Equal(t, "tag", tag.Tag)
 	assert.EqualValues(t, []uint32{10, 12, 14}, tag.DocumentIDs)
 }
@@ -276,8 +277,9 @@ func TestClient_RemoveDocumentFromTag(t *testing.T) {
 	err = client.RemoveDocumentFromTag("tag", 12)
 	assert.Nil(t, err)
 
-	tag, err := client.FindTag("tag")
+	tags, err := client.FindTags("tag")
 	assert.Nil(t, err)
+	tag := tags[0]
 	assert.Equal(t, "tag", tag.Tag)
 	assert.EqualValues(t, []uint32{10}, tag.DocumentIDs)
 
@@ -285,9 +287,9 @@ func TestClient_RemoveDocumentFromTag(t *testing.T) {
 	err = client.RemoveDocumentFromTag("tag", 10)
 	assert.Nil(t, err)
 
-	tag, err = client.FindTag("tag")
+	tags, err = client.FindTags("tag")
 	assert.Error(t, err)
-	assert.Nil(t, tag)
+	assert.Equal(t, 0, len(tags))
 }
 
 func TestClient_AddDocumentToToken(t *testing.T) {
@@ -313,13 +315,15 @@ func TestClient_AddDocumentToToken(t *testing.T) {
 	err = client.AddDocumentToToken("token", 12, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
-	token, err := client.FindToken("token")
+	tokens, err := client.FindTokens("token")
 	assert.Nil(t, err)
-	if token != nil {
+	if len(tokens) > 0 {
+		token := tokens[0]
 		assert.Equal(t, "token", token.Word)
-		assert.EqualValues(t, []uint32{10, 20, 30}, token.Postings[10].Positions)
-		assert.EqualValues(t, []uint32{10, 20, 30}, token.Postings[12].Positions)
-		assert.EqualValues(t, []uint32{10, 20, 30}, token.Postings[14].Positions)
+		postingMap := token.toPostingMap()
+		assert.EqualValues(t, []uint32{10, 20, 30}, postingMap[10].Positions)
+		assert.EqualValues(t, []uint32{10, 20, 30}, postingMap[12].Positions)
+		assert.EqualValues(t, []uint32{10, 20, 30}, postingMap[14].Positions)
 	}
 }
 
@@ -344,16 +348,49 @@ func TestClient_RemoveDocumentFromToken(t *testing.T) {
 	err = client.RemoveDocumentFromToken("token", 12)
 	assert.Nil(t, err)
 
-	token, err := client.FindToken("token")
+	tokens, err := client.FindTokens("token")
 	assert.Nil(t, err)
-	assert.Equal(t, "token", token.Word)
-	assert.EqualValues(t, []uint32{10, 12, 14}, token.Postings[10].Positions)
+	assert.Equal(t, "token", tokens[0].Word)
+	postingMap := tokens[0].toPostingMap()
+	assert.EqualValues(t, []uint32{10, 12, 14}, postingMap[10].Positions)
 
 	// 10 -> removed
 	err = client.RemoveDocumentFromToken("token", 10)
 	assert.Nil(t, err)
 
-	token, err = client.FindToken("token")
+	tokens, err = client.FindTokens("token")
 	assert.Error(t, err)
-	assert.Nil(t, token)
+	assert.Equal(t, 0, len(tokens))
+}
+
+func TestFindTokens(t *testing.T) {
+	wt, err := NewWaterTower(Option{
+		CollectionPrefix: xid.New().String(),
+		DocumentUrl:      "mem://",
+	})
+	assert.Nil(t, err)
+	defer wt.Close()
+	client, err := wt.SearchClient(context.Background())
+	assert.Nil(t, err)
+	defer func() {
+		err := client.Close()
+		assert.Nil(t, err)
+	}()
+
+	client.addDocumentToToken("test1", 1, []uint32{10, 20})
+	client.addDocumentToToken("test2", 1, []uint32{10, 20})
+	client.addDocumentToToken("test3", 1, []uint32{10, 20})
+	client.addDocumentToToken("test4", 1, []uint32{10, 20})
+
+	tokens, err := client.FindTokens("test1", "test2", "test3", "test4")
+	assert.Nil(t, err)
+	assert.Equal(t, 4, len(tokens))
+	assert.Equal(t, "test1", tokens[0].Word)
+	assert.Equal(t, uint32(1), tokens[0].Postings[0].DocumentID)
+	assert.Equal(t, "test2", tokens[1].Word)
+	assert.Equal(t, uint32(1), tokens[1].Postings[0].DocumentID)
+	assert.Equal(t, "test3", tokens[2].Word)
+	assert.Equal(t, uint32(1), tokens[2].Postings[0].DocumentID)
+	assert.Equal(t, "test4", tokens[3].Word)
+	assert.Equal(t, uint32(1), tokens[3].Postings[0].DocumentID)
 }
