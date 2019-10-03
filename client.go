@@ -15,10 +15,9 @@ type Client struct {
 	ctx       context.Context
 	documents *docstore.Collection
 	docKeys   *docstore.Collection
-	docIds    *docstore.Collection
+	uniqueIDs *docstore.Collection
 	tokens    *docstore.Collection
 	tags      *docstore.Collection
-	fanOut    func(msg *pubsub.Message) error
 }
 
 var dummyFanOut = func(message *pubsub.Message) error { return nil }
@@ -30,7 +29,7 @@ func localFilePath(filename, folder string) string {
 	return filepath.Join(folder, filename)
 }
 
-func (w WaterTower) SearchClient(ctx context.Context) (*Client, error) {
+func (w WaterTower) OpenClient(ctx context.Context) (*Client, error) {
 	var errors []string
 	result := &Client{
 		ctx: ctx,
@@ -54,23 +53,19 @@ func (w WaterTower) SearchClient(ctx context.Context) (*Client, error) {
 	}
 	result.documents = configCollection(w.collectionPrefix+"documents", "id", "documents.db")
 	result.docKeys = configCollection(w.collectionPrefix+"dockeys", "unique_key", "dockeys.db")
+	result.uniqueIDs = configCollection(w.collectionPrefix+"uniqueids", "collection", "docids.db")
 	result.tokens = configCollection(w.collectionPrefix+"tokens", "word", "tokens.db")
 	result.tags = configCollection(w.collectionPrefix+"tags", "tag", "tags.db")
-	fanOutUrl, err := gocloudurls.NormalizePubSubURL(w.fanOutUrl)
-	if err != nil {
-		errors = append(errors, err.Error())
-	} else {
-		topic, err := pubsub.OpenTopic(ctx, fanOutUrl)
-		if err != nil {
-			errors = append(errors, err.Error())
-		} else {
-			result.fanOut = func(msg *pubsub.Message) error {
-				return topic.Send(ctx, msg)
-			}
-		}
-	}
 	if len(errors) > 0 {
 		return nil, fmt.Errorf("Can't open collections :%s", strings.Join(errors, ", "))
+	}
+	uniqueID := UniqueID{
+		Collection: "documents",
+		LatestID:   0,
+	}
+	err := result.uniqueIDs.Get(ctx, &uniqueID)
+	if err != nil {
+		result.uniqueIDs.Create(ctx, &uniqueID)
 	}
 	return result, nil
 }
@@ -81,6 +76,10 @@ func (c *Client) Close() (errors []error) {
 		errors = append(errors, err)
 	}
 	err = c.docKeys.Close()
+	if err != nil {
+		errors = append(errors, err)
+	}
+	err = c.uniqueIDs.Close()
 	if err != nil {
 		errors = append(errors, err)
 	}

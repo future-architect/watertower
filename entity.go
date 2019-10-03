@@ -20,6 +20,7 @@ type DocumentKey struct {
 
 type Token struct {
 	Word     string    `json:"word"`
+	Found    bool      `json:"found"`
 	Postings []Posting `json:"postings"`
 }
 
@@ -54,4 +55,9 @@ type Tag struct {
 type TagEntity struct {
 	Tag         string `docstore:"tag"`
 	DocumentIDs []byte `docstore:"documentIDs"`
+}
+
+type UniqueID struct {
+	Collection string `docstore:"collection"`
+	LatestID   uint32 `docstore:"latestID"`
 }

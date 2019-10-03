@@ -1,50 +1,67 @@
 package watertower
 
-type ResultPerWord struct {
-	Word  string `json:"word"`
-	Count int    `json:"count"`
-}
+import (
+	"fmt"
+	"github.com/shibukawa/watertower/nlp"
+	"golang.org/x/sync/errgroup"
+)
 
-func (c Client) Search(searchWord string, tags []string, lang string) ([]*Document, []ResultPerWord, error) {
-	/*useTagFilter := len(tags) > 0
-	useWordFilter := searchWord != ""
-	var tagDocIds []uint32
-	if useTagFilter {
-		actions := c.tags.Actions()
-		foundTags := make([]TagEntity, len(tags))
-		for i, tag := range tags {
-			foundTags[i].Tag = tag
-			actions = actions.Get(&foundTags[i])
-		}
-		err := actions.Do(c.ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-	}*/
-	return nil, nil, nil
-
-	/*tokenizer, err := nlp.FindTokenizer(lang)
+func (c Client) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
+	tokenizer, err := nlp.FindTokenizer(lang)
 	if err != nil {
-		return nil, nil, fmt.Errorf("tokenizer for language '%s' is not found: %w", err)
-	}
-	searchTokens := tokenizer.Tokenize(searchWord)
-	resultPerWord := make([]ResultPerWord, 0, len(searchTokens))
-	foundTokens := make(map[string]*Token)
-	for token, tokenInfo := range searchTokens {
-		foundToken, err := c.FindTokens(token)
-		if err != nil {
-			resultPerWord = append(resultPerWord, ResultPerWord{
-				Word: tokenInfo.BeforeStem,
-				Count: 0,
-			})
-		} else {
-			resultPerWord = append(resultPerWord, ResultPerWord{
-				Word: tokenInfo.BeforeStem,
-				Count: len(foundToken.Postings),
-			})
-			foundTokens[token] = foundToken
-		}
+		return nil, fmt.Errorf("tokenizer for language '%s' is not found: %w", lang, err)
 	}
 
-	panic("not implemented")*/
+	errGroup, ctx := errgroup.WithContext(c.ctx)
+	var tagDocIDGroups [][]uint32
+	errGroup.Go(func() error {
+		findTags, err := c.FindTagsWithContext(ctx, tags...)
+		if err != nil {
+			return err
+		}
+		tagDocIDGroups = make([][]uint32, len(findTags))
+		for i, findTag := range findTags {
+			tagDocIDGroups[i] = findTag.DocumentIDs
+		}
+		return nil
+	})
+
+	searchTokens := tokenizer.TokenizeToMap(searchWord)
+	var foundTokens []*Token
+	var tokenDocIDGroups [][]uint32
+	errGroup.Go(func() (err error) {
+		tokens := make([]string, 0, len(searchTokens))
+		for token := range searchTokens {
+			tokens = append(tokens, token)
+		}
+		foundTokens, err = c.FindTokensWithContext(ctx, tokens...)
+		for _, token := range foundTokens {
+			docIDs := make([]uint32, len(token.Postings))
+			for i, posting := range token.Postings {
+				docIDs[i] = posting.DocumentID
+			}
+			tokenDocIDGroups = append(tokenDocIDGroups, docIDs)
+		}
+		return
+	})
+
+	err = errGroup.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	docIDMap := make(map[uint32]bool)
+	if len(tags) > 0 {
+		docIDGroups := append(tagDocIDGroups, tokenDocIDGroups...)
+		docIDMap = intersection(docIDGroups...)
+	} else {
+		docIDMap = intersection(tokenDocIDGroups...)
+	}
+
+	docIDs := make([]uint32, 0, len(docIDMap))
+	for docID := range docIDMap {
+		docIDs = append(docIDs, docID)
+	}
+
+	return c.FindDocuments(docIDs...)
 }

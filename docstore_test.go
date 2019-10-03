@@ -12,9 +12,7 @@ func TestDocStoreConflict(t *testing.T) {
 		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
-	client.fanOut = dummyFanOut
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -38,9 +36,7 @@ func TestDocStoreNotFound(t *testing.T) {
 		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
-	client.fanOut = dummyFanOut
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()

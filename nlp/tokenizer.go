@@ -13,7 +13,6 @@ var languages = make(map[string]*Tokenizer)
 
 type Token struct {
 	Word       string
-	BeforeStem string
 	Positions  []uint32
 }
 
@@ -45,26 +44,34 @@ func (t Tokenizer) StemWord(word string) string {
 	return t.stemmer(word)
 }
 
-func (t Tokenizer) Tokenize(content string) map[string]*Token {
+func (t Tokenizer) Tokenize(content string) []*Token {
 	words := t.splitter(content)
-	tokens := make(map[string]*Token)
-	var position uint32
+	wordToPositions := make(map[string][]uint32)
+	var index uint32
 	for _, word := range words {
 		if t.stopWords[word] {
 			continue
 		}
 		stemWord := t.stemmer(word)
-		if token, ok := tokens[stemWord]; ok {
-			token.Positions = append(token.Positions, position)
-		} else {
-			token := &Token{
+		wordToPositions[stemWord] = append(wordToPositions[stemWord], index)
+		index++
+	}
+	result := make([]*Token, index)
+	for stemWord, positions := range wordToPositions {
+		for _, pos := range positions {
+			result[pos] =  &Token{
 				Word:       stemWord,
-				BeforeStem: word,
-				Positions:  []uint32{position},
+				Positions:  positions,
 			}
-			tokens[stemWord] = token
 		}
-		position++
+	}
+	return result
+}
+
+func (t Tokenizer) TokenizeToMap(content string) map[string]*Token {
+	tokens := make(map[string]*Token)
+	for _, token := range t.Tokenize(content) {
+		tokens[token.Word] = token
 	}
 	return tokens
 }

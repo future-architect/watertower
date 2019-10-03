@@ -1,17 +1,13 @@
 package watertower
 
 import (
-	"encoding/base64"
+	"context"
 	"fmt"
-	"io"
-	"reflect"
-	"sort"
-	"strconv"
-
 	"github.com/shibukawa/compints"
 	"github.com/shibukawa/watertower/nlp"
 	"gocloud.dev/docstore"
-	"gocloud.dev/pubsub"
+	"reflect"
+	"sort"
 )
 
 func (c Client) PostDocument(uniqueKey string, document *Document) (uint32, error) {
@@ -51,17 +47,9 @@ func (c Client) postDocumentKey(uniqueKey string) (uint32, error) {
 	if err == nil {
 		return existingDocKey.ID, nil
 	}
-	iter := c.docKeys.Query().OrderBy("id", docstore.Descending).Limit(1).Get(c.ctx)
-	defer iter.Stop()
-	var latestKey DocumentKey
-	err = iter.Next(c.ctx, &latestKey)
-	var newID uint32
-	if err == io.EOF {
-		newID = 1
-	} else if err != nil {
+	newID, err := c.incrementID()
+	if err != nil {
 		return 0, err
-	} else {
-		newID = latestKey.ID + 1
 	}
 	err = c.docKeys.Create(c.ctx, &DocumentKey{
 		UniqueKey: uniqueKey,
@@ -87,6 +75,23 @@ func (c Client) postDocument(docID uint32, uniqueKey string, document *Document)
 	}
 }
 
+func (c Client) incrementID() (uint32, error) {
+	uniqueID := UniqueID{
+		Collection: "documents",
+	}
+	latestUniqueID := UniqueID{
+		Collection: "documents",
+	}
+	err := c.uniqueIDs.Actions().
+		Update(&uniqueID, docstore.Mods{"latestID": docstore.Increment(1)}).
+		Get(&latestUniqueID).
+		Do(c.ctx)
+	if err != nil {
+		return 0, err
+	}
+	return latestUniqueID.LatestID, nil
+}
+
 func (c Client) RemoveDocument(uniqueKey string) error {
 	docID, existingDocKey, oldDoc, err := c.findDocumentByKey(uniqueKey)
 	if err != nil {
@@ -104,7 +109,6 @@ func (c Client) RemoveDocument(uniqueKey string) error {
 }
 
 func (c Client) updateTagsAndTokens(docID uint32, newDocument, oldDocument *Document) error {
-	docIDstr := strconv.Itoa(int(docID))
 	load := func(label string, document *Document) ([]string, map[string]*nlp.Token, error) {
 		if document == nil {
 			return nil, make(map[string]*nlp.Token), nil
@@ -113,7 +117,7 @@ func (c Client) updateTagsAndTokens(docID uint32, newDocument, oldDocument *Docu
 		if err != nil {
 			return nil, nil, fmt.Errorf("Cannot find tokenizer for %s document: lang=%s, err=%w", label, document.Language, err)
 		}
-		documentTokens := tokenizer.Tokenize(document.Content)
+		documentTokens := tokenizer.TokenizeToMap(document.Content)
 		return document.Tags, documentTokens, nil
 	}
 
@@ -128,63 +132,35 @@ func (c Client) updateTagsAndTokens(docID uint32, newDocument, oldDocument *Docu
 
 	// update tags
 	newTags, deletedTags := groupingTags(oldTags, newTags)
-	err = c.updateTags(newTags, docIDstr, "new")
-	if err != nil {
-		return err
-	}
-	err = c.updateTags(deletedTags, docIDstr, "delete")
-	if err != nil {
-		return err
-	}
-
-	// update tokens
-	newTokens, deletedTokens, updateTokens := groupingTokens(oldDocumentTokens, newDocumentTokens)
-	err = c.updateTokens(newTokens, docIDstr, "new", true)
-	if err != nil {
-		return err
-	}
-	err = c.updateTokens(deletedTokens, docIDstr, "delete", true)
-	if err != nil {
-		return err
-	}
-	err = c.updateTokens(updateTokens, docIDstr, "update", true)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c Client) updateTokens(tokens []*nlp.Token, docIDstr string, action string, sendPositions bool) error {
-	for _, token := range tokens {
-		metadata := map[string]string{
-			"docID":  docIDstr,
-			"target": "token",
-			"token":  token.Word,
-			"action": action,
-		}
-		if sendPositions {
-			metadata["positions"] = base64.StdEncoding.EncodeToString(compints.CompressToBytes(token.Positions, true))
-		}
-		err := c.fanOut(&pubsub.Message{
-			Metadata: metadata,
-		})
+	for _, tag := range newTags {
+		err := c.AddDocumentToTag(tag, docID)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
-}
+	for _, tag := range deletedTags {
+		err := c.RemoveDocumentFromTag(tag, docID)
+		if err != nil {
+			return err
+		}
+	}
 
-func (c Client) updateTags(tags []string, docIDstr string, action string) error {
-	for _, tag := range tags {
-		err := c.fanOut(&pubsub.Message{
-			Metadata: map[string]string{
-				"docID":  docIDstr,
-				"target": "tag",
-				"tag":    tag,
-				"action": action,
-			},
-		})
+	// update tokens
+	newTokens, deletedTokens, updateTokens := groupingTokens(oldDocumentTokens, newDocumentTokens)
+	for _, token := range newTokens {
+		err := c.AddDocumentToToken(token.Word, docID, token.Positions)
+		if err != nil {
+			return err
+		}
+	}
+	for _, token := range deletedTokens {
+		err := c.RemoveDocumentFromToken(token.Word, docID)
+		if err != nil {
+			return err
+		}
+	}
+	for _, token := range updateTokens {
+		err := c.AddDocumentToToken(token.Word, docID, token.Positions)
 		if err != nil {
 			return err
 		}
@@ -407,6 +383,10 @@ func (c Client) removeDocumentFromToken(word string, docID uint32) error {
 }
 
 func (c Client) FindTags(tagNames ...string) ([]*Tag, error) {
+	return c.FindTagsWithContext(c.ctx, tagNames...)
+}
+
+func (c Client) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]*Tag, error) {
 	if len(tagNames) == 0 {
 		return nil, nil
 	}
@@ -416,7 +396,7 @@ func (c Client) FindTags(tagNames ...string) ([]*Tag, error) {
 		existingTags[i].Tag = tagName
 		actions = actions.Get(&existingTags[i])
 	}
-	err := actions.Do(c.ctx)
+	err := actions.Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -435,35 +415,48 @@ func (c Client) FindTags(tagNames ...string) ([]*Tag, error) {
 }
 
 func (c Client) FindTokens(words ...string) ([]*Token, error) {
+	return c.FindTokensWithContext(c.ctx, words...)
+}
+
+func (c Client) FindTokensWithContext(ctx context.Context, words ...string) ([]*Token, error) {
 	if len(words) == 0 {
 		return nil, nil
 	}
-	existingTokens := make([]TokenEntity, len(words))
+	positions := make(map[string][]int)
+	for i, word := range words {
+		positions[word] = append(positions[word], i)
+	}
+	existingTokens := make([]TokenEntity, len(positions))
 	actions := c.tokens.Actions()
 	for i, word := range words {
 		existingTokens[i].Word = word
 		actions = actions.Get(&existingTokens[i])
 	}
-	err := actions.Do(c.ctx)
-	if err != nil {
-		return nil, err
+	hasErrors := make(map[int]bool)
+	if errs, ok := actions.Do(ctx).(docstore.ActionListError); ok {
+		for _, err := range errs {
+			hasErrors[err.Index] = true
+		}
 	}
 	result := make([]*Token, len(words))
 	for i, existingToken := range existingTokens {
 		token := &Token{
-			Word: existingToken.Word,
+			Word:  existingToken.Word,
+			Found: !hasErrors[i],
 		}
 		for _, posting := range existingToken.Postings {
 			positions, err := compints.DecompressFromBytes(posting.Positions, true)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Compressed data is broken of position of doc %d of token %s: %w", posting.DocumentID, existingToken.Word, err)
 			}
 			token.Postings = append(token.Postings, Posting{
 				DocumentID: posting.DocumentID,
 				Positions:  positions,
 			})
 		}
-		result[i] = token
+		for _, pos := range positions[existingToken.Word] {
+			result[pos] = token
+		}
 	}
 	return result, nil
 }

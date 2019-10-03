@@ -9,7 +9,6 @@ import (
 	_ "github.com/shibukawa/watertower/nlp/english"
 	"github.com/stretchr/testify/assert"
 	_ "gocloud.dev/docstore/memdocstore"
-	"gocloud.dev/pubsub"
 )
 
 func TestClient_PostDocument_IncrementID(t *testing.T) {
@@ -18,8 +17,7 @@ func TestClient_PostDocument_IncrementID(t *testing.T) {
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -35,14 +33,32 @@ func TestClient_PostDocument_IncrementID(t *testing.T) {
 	assert.Equal(t, uint32(2), docID)
 }
 
+func TestClient_incrementID(t *testing.T) {
+	wt, err := NewWaterTower(Option{
+		CollectionPrefix: xid.New().String(),
+		DocumentUrl:      "mem://",
+	})
+	assert.Nil(t, err)
+	client, err := wt.OpenClient(context.Background())
+	assert.Nil(t, err)
+	defer func() {
+		err := client.Close()
+		assert.Nil(t, err)
+	}()
+	var lastID uint32
+	for i := 0; i < 100; i++ {
+		lastID, _ = client.incrementID()
+	}
+	assert.Equal(t, 100, int(lastID))
+}
+
 func TestClient_PostDocument(t *testing.T) {
 	wt, err := NewWaterTower(Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -75,88 +91,6 @@ func TestClient_PostDocument(t *testing.T) {
 	loadedDoc, err := client.FindDocumentByKey("test")
 	assert.Nil(t, err)
 	assert.Equal(t, "new title", loadedDoc.Title)
-}
-
-func TestClient_PostDocument_FanOut(t *testing.T) {
-	wt, err := NewWaterTower(Option{
-		CollectionPrefix: xid.New().String(),
-		DocumentUrl:      "mem://",
-	})
-	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
-	assert.Nil(t, err)
-	defer func() {
-		err := client.Close()
-		assert.Nil(t, err)
-	}()
-	var tagCount int
-	var tokenCount int
-	client.fanOut = func(m *pubsub.Message) error {
-		switch m.Metadata["target"] {
-		case "tag":
-			tagCount++
-		case "token":
-			tokenCount++
-		}
-		return nil
-	}
-
-	doc := &Document{
-		Title:    "test",
-		Language: "en",
-		Tags:     []string{"go", "website", "introduction"},
-		Content:  "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
-	}
-	docID, err := client.PostDocument("test", doc)
-	assert.Equal(t, uint32(1), docID)
-	assert.Nil(t, err)
-
-	// fanOut function is called
-	assert.Equal(t, 3, tagCount)
-	assert.Greater(t, 20, tokenCount)
-}
-
-func TestClient_RemoveDocument(t *testing.T) {
-	wt, err := NewWaterTower(Option{
-		CollectionPrefix: xid.New().String(),
-		DocumentUrl:      "mem://",
-	})
-	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
-	assert.Nil(t, err)
-	defer func() {
-		err := client.Close()
-		assert.Nil(t, err)
-	}()
-	var tagCount int
-	var tokenCount int
-	client.fanOut = func(m *pubsub.Message) error {
-		if m.Metadata["action"] != "delete" {
-			return nil
-		}
-		switch m.Metadata["target"] {
-		case "tag":
-			tagCount++
-		case "token":
-			tokenCount++
-		}
-		return nil
-	}
-	doc := &Document{
-		Title:    "test",
-		Language: "en",
-		Tags:     []string{"go", "website", "introduction"},
-		Content:  "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
-	}
-	client.PostDocument("test", doc)
-
-	err = client.RemoveDocument("test")
-	assert.Nil(t, err)
-	// fanOut function is called
-	assert.Equal(t, 3, tagCount)
-	assert.Greater(t, 20, tokenCount)
 }
 
 func Test_grouping(t *testing.T) {
@@ -232,8 +166,7 @@ func TestClient_AddDocumentToTag(t *testing.T) {
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -262,8 +195,7 @@ func TestClient_RemoveDocumentFromTag(t *testing.T) {
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -298,8 +230,7 @@ func TestClient_AddDocumentToToken(t *testing.T) {
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -333,8 +264,7 @@ func TestClient_RemoveDocumentFromToken(t *testing.T) {
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -359,8 +289,9 @@ func TestClient_RemoveDocumentFromToken(t *testing.T) {
 	assert.Nil(t, err)
 
 	tokens, err = client.FindTokens("token")
-	assert.Error(t, err)
-	assert.Equal(t, 0, len(tokens))
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(tokens))
+	assert.False(t, tokens[0].Found)
 }
 
 func TestFindTokens(t *testing.T) {
@@ -369,8 +300,7 @@ func TestFindTokens(t *testing.T) {
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	defer wt.Close()
-	client, err := wt.SearchClient(context.Background())
+	client, err := wt.OpenClient(context.Background())
 	assert.Nil(t, err)
 	defer func() {
 		err := client.Close()
@@ -384,6 +314,7 @@ func TestFindTokens(t *testing.T) {
 
 	tokens, err := client.FindTokens("test1", "test2", "test3", "test4")
 	assert.Nil(t, err)
+	t.Log(tokens)
 	assert.Equal(t, 4, len(tokens))
 	assert.Equal(t, "test1", tokens[0].Word)
 	assert.Equal(t, uint32(1), tokens[0].Postings[0].DocumentID)

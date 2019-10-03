@@ -10,8 +10,29 @@ import (
 const Language = "en"
 
 func init() {
-	// https://github.com/stopwords-iso/stopwords-en/blob/master/raw/snowball-tartarus.txt
-	stopWordsSrc := `
+	stopWords := make(map[string]bool)
+	/*for _, stopWord := range strings.Fields(stopWordsSrc) {
+		stopWords[stopWord] = true
+	}*/
+	nlp.RegisterTokenizer(Language, englishSplitter, englishStemmer, stopWords)
+}
+
+func englishSplitter(content string) []string {
+	words := strings.Fields(content)
+	result := make([]string, 0, len(words))
+	for _, word := range words {
+		word = strings.TrimRight(word, ".,")
+		result = append(result, strings.ToLower(word))
+	}
+	return result
+}
+
+func englishStemmer(content string) string {
+	return english.Stem(content, false)
+}
+
+// https://github.com/stopwords-iso/stopwords-en/blob/master/raw/snowball-tartarus.txt
+var stopWordsSrc = `
 i
 me
 my
@@ -241,24 +262,3 @@ old
 high
 long
     `
-	stopWords := make(map[string]bool)
-	for _, stopWord := range strings.Fields(stopWordsSrc) {
-		stopWords[stopWord] = true
-	}
-	nlp.RegisterTokenizer(Language, englishSplitter, englishStemmer, stopWords)
-}
-
-func englishSplitter(content string) []string {
-	words := strings.Fields(content)
-	result := make([]string, 0, len(words))
-	for _, word := range words {
-		word = strings.TrimRight(word, ".,")
-		result = append(result, strings.ToLower(word))
-	}
-	return result
-}
-
-func englishStemmer(content string) string {
-	return english.Stem(content, false)
-}
-
