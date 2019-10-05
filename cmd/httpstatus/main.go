@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
@@ -43,12 +42,11 @@ func main() {
 		color.Cyan("No Match")
 	}
 	for i, doc := range docs {
-		color.Green("\n%d: -----------------------------------------------------------\n", i+1)
-
-		fmt.Println(doc.Content)
-
-		if len(docs)-1 == i {
-			color.Green("\n---------------------------------------------------------------\n")
+		if i != 0 {
+			color.Green("\n-----------------------------------------------------------\n\n")
 		}
+
+		color.Blue("# %s \n\n", doc.Title)
+		color.Cyan(doc.Content)
 	}
 }
