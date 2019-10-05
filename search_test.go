@@ -3,6 +3,8 @@ package watertower
 import (
 	"context"
 	"github.com/rs/xid"
+	_ "github.com/shibukawa/watertower/nlp/english"
+	_ "github.com/shibukawa/watertower/nlp/japanese"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -134,4 +136,34 @@ It is noncommittal, since there is no way in HTTP to later send an asynchronous 
 It is intended for cases where another process or server handles the request, or for batch processing.`,
 		Tags: []string{"202"},
 	},
+}
+
+func TestSearchJP(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
+		CollectionPrefix: xid.New().String(),
+		DocumentUrl:      "mem://",
+	})
+	assert.Nil(t, err)
+	defer func() {
+		err := wt.Close()
+		assert.Nil(t, err)
+	}()
+	doc := &Document{
+		Language: "ja",
+		Title:    "ドリルではなく穴が欲しい。穴が必要なシチュエーションは？",
+		Tags:     []string{"Go", "アプローチ"},
+		Content: `Go で作ったと話すと、「どうやってそれでOKもらったのか？」と聞かれることがある。具体的な内容ではなく、アプローチをメモしておく。
+
+「顧客はドリルではなく穴が欲しい」とよく言われる。もう一歩進んで穴が必要なシチュエーションも考えてみましょう、と。そうすると穴が必要であることを自覚していない人を、ドリルの顧客にできるかも知れない。
+
+むかーしむかし、職場の営業担当者向けの研修で仕様から便益、便益から機会を特定するというフレームワークを習った。営業候補だった頃が私にもあったのですよ。`,
+		Comment: "https://medium.com/@torufurukawa/%E3%83%89%E3%83%AA%E3%83%AB%E3%81%A7%E3%81%AF%E3%81%AA%E3%81%8F%E7%A9%B4%E3%81%8C%E6%AC%B2%E3%81%97%E3%81%84-%E7%A9%B4%E3%81%8C%E5%BF%85%E8%A6%81%E3%81%AA%E3%82%B7%E3%83%81%E3%83%A5%E3%82%A8%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AF-127c65d1b78b",
+	}
+	id, err := wt.PostDocument("bucho-medium", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(1), id)
+
+	docs, err := wt.Search("ドリル", nil, "ja")
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(docs))
 }
