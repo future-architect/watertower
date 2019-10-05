@@ -64,8 +64,11 @@ func (c WaterTower) Search(searchWord string, tags []string, lang string) ([]*Do
 	if len(tags) > 0 && len(searchTokens) > 0 {
 		docIDGroups := append(tagDocIDGroups, tokenDocIDGroups...)
 		docIDMap = intersection(docIDGroups...)
-	} else {
+	} else if len(searchTokens) > 0 {
 		docIDMap = intersection(tokenDocIDGroups...)
+	} else {
+		// len(tags) > 0
+		docIDMap = intersection(tagDocIDGroups...)
 	}
 
 	docIDs := make([]uint32, 0, len(docIDMap))

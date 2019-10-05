@@ -65,7 +65,6 @@ func Testwt_PostDocument(t *testing.T) {
 		UpdatedAt: time.Time{},
 		Tags:      []string{"go", "website", "introduction"},
 		Content:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
-		Summary:   "Summary",
 	}
 	docID, err := wt.postDocumentKey("test")
 	assert.Nil(t, err)
