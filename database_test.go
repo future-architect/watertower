@@ -11,7 +11,7 @@ import (
 	_ "gocloud.dev/docstore/memdocstore"
 )
 
-func Testwt_PostDocument_IncrementID(t *testing.T) {
+func Test_PostDocument_IncrementID(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
@@ -31,7 +31,7 @@ func Testwt_PostDocument_IncrementID(t *testing.T) {
 	assert.Equal(t, uint32(2), docID)
 }
 
-func Testwt_incrementID(t *testing.T) {
+func Test_incrementID(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
@@ -48,7 +48,7 @@ func Testwt_incrementID(t *testing.T) {
 	assert.Equal(t, 100, int(lastID))
 }
 
-func Testwt_PostDocument(t *testing.T) {
+func Test_PostDocument(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
@@ -68,16 +68,18 @@ func Testwt_PostDocument(t *testing.T) {
 	}
 	docID, err := wt.postDocumentKey("test")
 	assert.Nil(t, err)
-	oldDoc, err := wt.postDocument(docID, "test", doc)
+	_, _, wordCount, err := wt.analyzeDocument("new", doc)
+	oldDoc, err := wt.postDocument(docID, "test", wordCount, doc)
 	assert.Nil(t, err)
 	assert.Nil(t, oldDoc)
 
 	loadedDocs, err := wt.FindDocuments(docID)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", loadedDocs[0].Title)
+	assert.Equal(t, wordCount, loadedDocs[0].WordCount)
 
 	doc.Title = "new title"
-	oldDoc, err = wt.postDocument(docID, "test", doc)
+	oldDoc, err = wt.postDocument(docID, "test", doc.WordCount, doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", oldDoc.Title)
 
@@ -153,7 +155,7 @@ func Test_grouping(t *testing.T) {
 	}
 }
 
-func Testwt_AddDocumentToTag(t *testing.T) {
+func Test_AddDocumentToTag(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
@@ -213,7 +215,7 @@ func Testwt_RemoveDocumentFromTag(t *testing.T) {
 	assert.Equal(t, 0, len(tags))
 }
 
-func Testwt_AddDocumentToToken(t *testing.T) {
+func Test_AddDocumentToToken(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
@@ -245,7 +247,7 @@ func Testwt_AddDocumentToToken(t *testing.T) {
 	}
 }
 
-func Testwt_RemoveDocumentFromToken(t *testing.T) {
+func Test_RemoveDocumentFromToken(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",

@@ -68,10 +68,11 @@ func (t Tokenizer) Tokenize(content string) []*Token {
 	return result
 }
 
-func (t Tokenizer) TokenizeToMap(content string) map[string]*Token {
-	tokens := make(map[string]*Token)
-	for _, token := range t.Tokenize(content) {
-		tokens[token.Word] = token
+func (t Tokenizer) TokenizeToMap(content string) (tokenMap map[string]*Token, wordCount int) {
+	tokenMap = make(map[string]*Token)
+	tokens := t.Tokenize(content)
+	for _, token := range tokens {
+		tokenMap[token.Word] = token
 	}
-	return tokens
+	return tokenMap, len(tokens)
 }

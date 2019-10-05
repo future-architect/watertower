@@ -10,6 +10,7 @@ type Document struct {
 	UpdatedAt   time.Time         `json:"updated_at,omitempty" docstore:"updated_at"`
 	Tags        []string          `json:"tags,omitempty" docstore:"tags"`
 	Content     string            `json:"content" docstore:"content"`
+	WordCount   int               `json:"-" docstore:"wordcount"`
 	Metadata    map[string]string `json:"metadata,omitempty" docstore:"metadata"`
 	TitleTokens int               `json:"-" docstore:"title_tokens"`
 	Score       float64           `json:"score,omitempty" docstore:"-"`

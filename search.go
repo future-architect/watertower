@@ -6,23 +6,23 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (c WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
+func (wt WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
 	tokenizer, err := nlp.FindTokenizer(lang)
 	if err != nil {
 		return nil, fmt.Errorf("tokenizer for language '%s' is not found: %w", lang, err)
 	}
-	searchTokens := tokenizer.TokenizeToMap(searchWord)
+	searchTokens, _ := tokenizer.TokenizeToMap(searchWord)
 
 	if len(searchTokens) == 0 && len(tags) == 0 {
 		return nil, nil
 	}
 
-	errGroup, ctx := errgroup.WithContext(c.ctx)
+	errGroup, ctx := errgroup.WithContext(wt.ctx)
 	var tagDocIDGroups [][]uint32
 
 	if len(tags) > 0 {
 		errGroup.Go(func() error {
-			findTags, err := c.FindTagsWithContext(ctx, tags...)
+			findTags, err := wt.FindTagsWithContext(ctx, tags...)
 			if err != nil {
 				return err
 			}
@@ -43,7 +43,7 @@ func (c WaterTower) Search(searchWord string, tags []string, lang string) ([]*Do
 			for token := range searchTokens {
 				tokens = append(tokens, token)
 			}
-			foundTokens, err = c.FindTokensWithContext(ctx, tokens...)
+			foundTokens, err = wt.FindTokensWithContext(ctx, tokens...)
 			for _, token := range foundTokens {
 				docIDs := make([]uint32, len(token.Postings))
 				for i, posting := range token.Postings {
@@ -76,5 +76,5 @@ func (c WaterTower) Search(searchWord string, tags []string, lang string) ([]*Do
 		docIDs = append(docIDs, docID)
 	}
 
-	return c.FindDocuments(docIDs...)
+	return wt.FindDocuments(docIDs...)
 }

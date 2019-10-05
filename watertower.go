@@ -33,6 +33,7 @@ type Option struct {
 	LocalFolder      string
 	CollectionPrefix string
 	CustomFanOut     string
+	TitleScoreRatio  float64
 }
 
 func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
@@ -45,6 +46,9 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	}
 	if option.DocumentUrl == "" {
 		return nil, errors.New("NewInvertedIndex: DocumentUrl is missign")
+	}
+	if option.TitleScoreRatio == 0.0 {
+		option.TitleScoreRatio = 5.0
 	}
 	finalError := &CombinedError{
 		Message: "Can't open collections for search engine",
@@ -93,16 +97,16 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	return result, nil
 }
 
-func (c *WaterTower) Close() (errors error) {
+func (wt *WaterTower) Close() (errors error) {
 	finalError := &CombinedError{
 		Message: "Can't close collections for search engine",
 	}
-	c.close.Do(func() {
-		finalError.appendIfError(c.documents.Close())
-		finalError.appendIfError(c.docKeys.Close())
-		finalError.appendIfError(c.uniqueIDs.Close())
-		finalError.appendIfError(c.tokens.Close())
-		finalError.appendIfError(c.tags.Close())
+	wt.close.Do(func() {
+		finalError.appendIfError(wt.documents.Close())
+		finalError.appendIfError(wt.docKeys.Close())
+		finalError.appendIfError(wt.uniqueIDs.Close())
+		finalError.appendIfError(wt.tokens.Close())
+		finalError.appendIfError(wt.tags.Close())
 	})
 	if finalError.Errors != nil {
 		return finalError
