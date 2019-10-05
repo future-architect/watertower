@@ -68,8 +68,8 @@ func Test_PostDocument(t *testing.T) {
 	}
 	docID, err := wt.postDocumentKey("test")
 	assert.Nil(t, err)
-	_, _, wordCount, err := wt.analyzeDocument("new", doc)
-	oldDoc, err := wt.postDocument(docID, "test", wordCount, doc)
+	_, _, wordCount, titleWordCount, err := wt.analyzeDocument("new", doc)
+	oldDoc, err := wt.postDocument(docID, "test", wordCount, titleWordCount, doc)
 	assert.Nil(t, err)
 	assert.Nil(t, oldDoc)
 
@@ -77,9 +77,10 @@ func Test_PostDocument(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", loadedDocs[0].Title)
 	assert.Equal(t, wordCount, loadedDocs[0].WordCount)
+	assert.Equal(t, titleWordCount, loadedDocs[0].TitleWordCount)
 
 	doc.Title = "new title"
-	oldDoc, err = wt.postDocument(docID, "test", doc.WordCount, doc)
+	oldDoc, err = wt.postDocument(docID, "test", doc.WordCount, doc.TitleWordCount, doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", oldDoc.Title)
 

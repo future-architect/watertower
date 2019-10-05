@@ -14,7 +14,7 @@ func (wt WaterTower) PostDocument(uniqueKey string, document *Document) (uint32,
 	retryCount := 50
 	var lastError error
 	var docID uint32
-	newTags, newDocTokens, wordCount, err := wt.analyzeDocument("new", document)
+	newTags, newDocTokens, wordCount, titleWordCount, err := wt.analyzeDocument("new", document)
 	if err != nil {
 		return 0, err
 	}
@@ -28,12 +28,12 @@ func (wt WaterTower) PostDocument(uniqueKey string, document *Document) (uint32,
 		return 0, fmt.Errorf("fail to register document's unique key: %w", lastError)
 	}
 	for i := 0; i < retryCount; i++ {
-		oldDoc, err := wt.postDocument(docID, uniqueKey, wordCount, document)
+		oldDoc, err := wt.postDocument(docID, uniqueKey, wordCount, titleWordCount, document)
 		if err != nil {
 			lastError = err
 			continue
 		}
-		oldTags, oldDocTokens, _, err := wt.analyzeDocument("old", oldDoc)
+		oldTags, oldDocTokens, _, _, err := wt.analyzeDocument("old", oldDoc)
 		if err != nil {
 			return 0, err
 		}
@@ -69,13 +69,14 @@ func (wt WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
 	return newID, nil
 }
 
-func (wt WaterTower) postDocument(docID uint32, uniqueKey string, wordCount int, document *Document) (*Document, error) {
+func (wt WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
 	existingDocument := Document{
 		ID: docID,
 	}
 	document.ID = docID
 	document.UniqueKey = uniqueKey
 	document.WordCount = wordCount
+	document.TitleWordCount = titleWordCount
 	err := wt.documents.Get(wt.ctx, &existingDocument)
 	if err != nil {
 		return nil, wt.documents.Create(wt.ctx, document)
@@ -114,23 +115,24 @@ func (wt WaterTower) RemoveDocument(uniqueKey string) error {
 	if err != nil {
 		return err
 	}
-	tags, tokens, _, err := wt.analyzeDocument("removed", oldDoc)
+	tags, tokens, _, _, err := wt.analyzeDocument("removed", oldDoc)
 	if err != nil {
 		return err
 	}
 	return wt.updateTagsAndTokens(docID, tags, nil, tokens, nil)
 }
 
-func (wt WaterTower) analyzeDocument(label string, document *Document) (tags []string, tokens map[string]*nlp.Token, wordCount int, err error) {
+func (wt WaterTower) analyzeDocument(label string, document *Document) (tags []string, tokens map[string]*nlp.Token, wordCount, titleWordCount int, err error) {
 	if document == nil {
-		return nil, make(map[string]*nlp.Token), 0, nil
+		return nil, make(map[string]*nlp.Token), 0, 0, nil
 	}
 	tokenizer, err := nlp.FindTokenizer(document.Language)
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("Cannot find tokenizer for %s document: lang=%s, err=%w", label, document.Language, err)
+		return nil, nil, 0, 0, fmt.Errorf("Cannot find tokenizer for %s document: lang=%s, err=%w", label, document.Language, err)
 	}
-	tokens, wordCount = tokenizer.TokenizeToMap(document.Content)
-	return document.Tags, tokens, wordCount, nil
+	tokens, wordCount = tokenizer.TokenizeToMap(document.Title + "\n" + document.Content)
+	titleWordCount = len(tokenizer.Tokenize(document.Title))
+	return document.Tags, tokens, wordCount, titleWordCount, nil
 }
 
 func (wt WaterTower) updateTagsAndTokens(docID uint32, oldTags, newTags []string, oldDocTokens, newDocTokens map[string]*nlp.Token) error {
