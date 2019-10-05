@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "451",
+  "lang": "en",
+  "title": "451 Unavailable For Legal Reasons",
+  "content": "The user requests an illegal resource, such as a web page censored by a government.",
+  "tags": [
+    "451"
+  ]
+}

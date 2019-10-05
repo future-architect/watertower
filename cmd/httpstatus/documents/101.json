@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "101",
+  "lang": "en",
+  "title": "101 Switching Protocol",
+  "content": "This code is sent in response to an Upgrade request header from the client, and indicates the protocol the server is switching to.",
+  "tags": [
+    "101"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "511",
+  "lang": "en",
+  "title": "511 Network Authentication Required",
+  "content": "The 511 status code indicates that the client needs to authenticate to gain network access.",
+  "tags": [
+    "511"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "203",
+  "lang": "en",
+  "title": "203 Non-Authoritative Information",
+  "content": "This response code means the returned meta-information is not exactly the same as available from the origin server, but collected from a local or a third-party copy. This is mostly used for mirrors or backups of another resource. Except for that specific case, 200 OK response should be preferred instead of this status.",
+  "tags": [
+    "203"
+  ]
+}

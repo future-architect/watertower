@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "510",
+  "lang": "en",
+  "title": "510 Not Extended",
+  "content": "Further extensions to the request are required for the server to fulfil it.",
+  "tags": [
+    "510"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "422",
+  "lang": "en",
+  "title": "422 Unprocessable Entity (WebDAV)",
+  "content": "The request was well-formed but was unable to be followed due to semantic errors.",
+  "tags": [
+    "422"
+  ]
+}

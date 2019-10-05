@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "206",
+  "lang": "en",
+  "title": "206 Partial Content",
+  "content": "This response code is used when the Range header is sent from the client to request only part of a resource.",
+  "tags": [
+    "206"
+  ]
+}

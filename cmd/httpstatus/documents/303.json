@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "303",
+  "lang": "en",
+  "title": "303 See Other",
+  "content": "The server sent this response to direct the client to get the requested resource at another URI with a GET request.",
+  "tags": [
+    "303"
+  ]
+}

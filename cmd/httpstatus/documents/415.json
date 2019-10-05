@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "415",
+  "lang": "en",
+  "title": "415 Unsupported Media Type",
+  "content": "The media format of the requested data is not supported by the server, so the server is rejecting the request.",
+  "tags": [
+    "415"
+  ]
+}

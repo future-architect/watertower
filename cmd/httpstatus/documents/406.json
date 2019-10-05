@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "406",
+  "lang": "en",
+  "title": "406 Not Acceptable",
+  "content": "This response is sent when the web server, after performing server-driven content negotiation, doesn't find any content following the criteria given by the user agent.",
+  "tags": [
+    "406"
+  ]
+}

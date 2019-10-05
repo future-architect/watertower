@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "431",
+  "lang": "en",
+  "title": "431 Request Header Fields Too Large",
+  "content": "The server is unwilling to process the request because its header fields are too large. The request MAY be resubmitted after reducing the size of the request header fields.",
+  "tags": [
+    "431"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "302",
+  "lang": "en",
+  "title": "302 Found",
+  "content": "This response code means that the URI of requested resource has been changed temporarily. New changes in the URI might be made in the future. Therefore, this same URI should be used by the client in future requests.",
+  "tags": [
+    "302"
+  ]
+}

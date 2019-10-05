@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "424",
+  "lang": "en",
+  "title": "424 Failed Dependency (WebDAV)",
+  "content": "The request failed due to failure of a previous request.",
+  "tags": [
+    "424"
+  ]
+}

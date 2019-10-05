@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "103",
+  "lang": "en",
+  "title": "103 Early Hints",
+  "content": "This status code is primarily intended to be used with the Link header, letting the user agent start preloading resources while the server prepares a response.",
+  "tags": [
+    "103"
+  ]
+}

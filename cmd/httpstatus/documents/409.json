@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "409",
+  "lang": "en",
+  "title": "409 Conflict",
+  "content": "This response is sent when a request conflicts with the current state of the server.",
+  "tags": [
+    "409"
+  ]
+}

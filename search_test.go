@@ -7,22 +7,19 @@ import (
 	"testing"
 )
 
-func TestSearch(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func TestSearchEN(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 	for _, data := range searchData {
 		data.Language = "en"
-		id, err := client.PostDocument(data.UniqueKey, data)
-		t.Log(id)
+		_, err := wt.PostDocument(data.UniqueKey, data)
 		assert.Nil(t, err)
 		if err != nil {
 			return
@@ -35,14 +32,33 @@ func TestSearch(t *testing.T) {
 		found      bool
 	}{
 		{
-			name:       "simple search",
-			searchWord: "201",
+			name:       "simple word search",
+			searchWord: "post",
+			searchTag:  nil,
 			found:      true,
+		},
+		{
+			name:       "simple tag search",
+			searchWord: "",
+			searchTag:  []string{"NoBody"},
+			found:      true,
+		},
+		{
+			name:       "word and tag search",
+			searchWord: "post",
+			searchTag:  []string{"200"},
+			found:      true,
+		},
+		{
+			name:       "word and tag conflict",
+			searchWord: "post",
+			searchTag:  []string{"NoBody"},
+			found:      false,
 		},
 	}
 	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
-			docs, err := client.Search(testcase.searchWord, testcase.searchTag, "en")
+			docs, err := wt.Search(testcase.searchWord, testcase.searchTag, "en")
 			assert.Nil(t, err)
 			if testcase.found {
 				assert.NotEmpty(t, docs)
@@ -59,7 +75,7 @@ var searchData = []*Document{
 		UniqueKey: "100 Continue",
 		Content: `100 Continue
 
-This interim response indicates that everything so far is OK and that the client should continue the request, or ignore the response if the request is already finished.`,
+This interim response indicates that everything so far is OK and that the wt should continue the request, or ignore the response if the request is already finished.`,
 		Tags: []string{"100", "NoBody"},
 	},
 	{
@@ -68,7 +84,7 @@ This interim response indicates that everything so far is OK and that the client
 		Content: `
 101 Switching Protocol
 
-This code is sent in response to an Upgrade request header from the client, and indicates the protocol the server is switching to.`,
+This code is sent in response to an Upgrade request header from the wt, and indicates the protocol the server is switching to.`,
 		Tags: []string{"101", "NoBody"},
 	},
 	{

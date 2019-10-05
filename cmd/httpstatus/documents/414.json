@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "414",
+  "lang": "en",
+  "title": "414 URI Too Long",
+  "content": "The URI requested by the client is longer than the server is willing to interpret.",
+  "tags": [
+    "414"
+  ]
+}

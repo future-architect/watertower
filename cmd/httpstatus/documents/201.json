@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "201",
+  "lang": "en",
+  "title": "201 Created",
+  "content": "The request has succeeded and a new resource has been created as a result. This is typically the response sent after POST requests, or some PUT requests.",
+  "tags": [
+    "201"
+  ]
+}

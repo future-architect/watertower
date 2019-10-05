@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "204",
+  "lang": "en",
+  "title": "204 No Content",
+  "content": "There is no content to send for this request, but the headers may be useful. The user-agent may update its cached headers for this resource with the new ones.",
+  "tags": [
+    "204"
+  ]
+}

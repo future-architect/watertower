@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "508",
+  "lang": "en",
+  "title": "508 Loop Detected (WebDAV)",
+  "content": "The server detected an infinite loop while processing the request.",
+  "tags": [
+    "508"
+  ]
+}

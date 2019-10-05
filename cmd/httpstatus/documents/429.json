@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "429",
+  "lang": "en",
+  "title": "429 Too Many Requests",
+  "content": "The user has sent too many requests in a given amount of time (\"rate limiting\").",
+  "tags": [
+    "429"
+  ]
+}

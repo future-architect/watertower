@@ -4,6 +4,10 @@
 *.dll
 *.so
 *.dylib
+cmd/httpstatus/httpstatus
+cmd/httpstatus/httpstatus.exe
+cmd/jsonschema/jsonschema
+cmd/jsonschema/jsonschema.exe
 
 # Test binary, build with `go test -c`
 *.test

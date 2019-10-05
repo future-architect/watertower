@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "102",
+  "lang": "en",
+  "title": "102 Processing (WebDAV)",
+  "content": "This code indicates that the server has received and is processing the request, but no response is available yet.",
+  "tags": [
+    "102"
+  ]
+}

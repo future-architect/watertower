@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "306",
+  "lang": "en",
+  "title": "306 unused",
+  "content": "This response code is no longer used, it is just reserved. It was used in a previous version of the HTTP/1.1 specification.",
+  "tags": [
+    "306"
+  ]
+}

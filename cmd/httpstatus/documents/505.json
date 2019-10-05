@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "505",
+  "lang": "en",
+  "title": "505 HTTP Version Not Supported",
+  "content": "The HTTP version used in the request is not supported by the server.",
+  "tags": [
+    "505"
+  ]
+}

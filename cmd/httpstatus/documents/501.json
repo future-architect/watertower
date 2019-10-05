@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "501",
+  "lang": "en",
+  "title": "501 Not Implemented",
+  "content": "The request method is not supported by the server and cannot be handled. The only methods that servers are required to support (and therefore that must not return this code) are GET and HEAD.",
+  "tags": [
+    "501"
+  ]
+}

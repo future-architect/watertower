@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "304",
+  "lang": "en",
+  "title": "304 Not Modified",
+  "content": "This is used for caching purposes. It tells the client that the response has not been modified, so the client can continue to use the same cached version of the response.",
+  "tags": [
+    "304"
+  ]
+}

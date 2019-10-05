@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "400",
+  "lang": "en",
+  "title": "400 Bad Request",
+  "content": "The server could not understand the request due to invalid syntax.",
+  "tags": [
+    "400"
+  ]
+}

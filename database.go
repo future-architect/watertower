@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-func (c Client) PostDocument(uniqueKey string, document *Document) (uint32, error) {
+func (c WaterTower) PostDocument(uniqueKey string, document *Document) (uint32, error) {
 	retryCount := 50
 	var lastError error
 	var docID uint32
@@ -39,7 +39,7 @@ func (c Client) PostDocument(uniqueKey string, document *Document) (uint32, erro
 	return 0, fmt.Errorf("fail to register document: %w", lastError)
 }
 
-func (c Client) postDocumentKey(uniqueKey string) (uint32, error) {
+func (c WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
 	existingDocKey := DocumentKey{
 		UniqueKey: uniqueKey,
 	}
@@ -61,7 +61,7 @@ func (c Client) postDocumentKey(uniqueKey string) (uint32, error) {
 	return newID, nil
 }
 
-func (c Client) postDocument(docID uint32, uniqueKey string, document *Document) (*Document, error) {
+func (c WaterTower) postDocument(docID uint32, uniqueKey string, document *Document) (*Document, error) {
 	existingDocument := Document{
 		ID: docID,
 	}
@@ -75,7 +75,7 @@ func (c Client) postDocument(docID uint32, uniqueKey string, document *Document)
 	}
 }
 
-func (c Client) incrementID() (uint32, error) {
+func (c WaterTower) incrementID() (uint32, error) {
 	uniqueID := UniqueID{
 		Collection: "documents",
 	}
@@ -92,7 +92,7 @@ func (c Client) incrementID() (uint32, error) {
 	return latestUniqueID.LatestID, nil
 }
 
-func (c Client) RemoveDocument(uniqueKey string) error {
+func (c WaterTower) RemoveDocument(uniqueKey string) error {
 	docID, existingDocKey, oldDoc, err := c.findDocumentByKey(uniqueKey)
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func (c Client) RemoveDocument(uniqueKey string) error {
 	return c.updateTagsAndTokens(docID, nil, oldDoc)
 }
 
-func (c Client) updateTagsAndTokens(docID uint32, newDocument, oldDocument *Document) error {
+func (c WaterTower) updateTagsAndTokens(docID uint32, newDocument, oldDocument *Document) error {
 	load := func(label string, document *Document) ([]string, map[string]*nlp.Token, error) {
 		if document == nil {
 			return nil, make(map[string]*nlp.Token), nil
@@ -207,7 +207,7 @@ func groupingTokens(oldGroup, newGroup map[string]*nlp.Token) (newItems, deleted
 	return
 }
 
-func (c Client) AddDocumentToTag(tag string, docID uint32) error {
+func (c WaterTower) AddDocumentToTag(tag string, docID uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
@@ -221,7 +221,7 @@ func (c Client) AddDocumentToTag(tag string, docID uint32) error {
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (c Client) addDocumentToTag(tag string, docID uint32) error {
+func (c WaterTower) addDocumentToTag(tag string, docID uint32) error {
 	existingTag := TagEntity{
 		Tag: tag,
 	}
@@ -253,7 +253,7 @@ func (c Client) addDocumentToTag(tag string, docID uint32) error {
 	}
 }
 
-func (c Client) RemoveDocumentFromTag(tag string, docID uint32) error {
+func (c WaterTower) RemoveDocumentFromTag(tag string, docID uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
@@ -267,7 +267,7 @@ func (c Client) RemoveDocumentFromTag(tag string, docID uint32) error {
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (c Client) removeDocumentFromTag(tag string, docID uint32) error {
+func (c WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 	existingTag := TagEntity{
 		Tag: tag,
 	}
@@ -297,7 +297,7 @@ func (c Client) removeDocumentFromTag(tag string, docID uint32) error {
 	}
 }
 
-func (c Client) AddDocumentToToken(word string, docID uint32, positions []uint32) error {
+func (c WaterTower) AddDocumentToToken(word string, docID uint32, positions []uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
@@ -311,7 +311,7 @@ func (c Client) AddDocumentToToken(word string, docID uint32, positions []uint32
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (c Client) addDocumentToToken(word string, docID uint32, positions []uint32) error {
+func (c WaterTower) addDocumentToToken(word string, docID uint32, positions []uint32) error {
 	existingToken := TokenEntity{
 		Word: word,
 	}
@@ -342,7 +342,7 @@ func (c Client) addDocumentToToken(word string, docID uint32, positions []uint32
 	}
 }
 
-func (c Client) RemoveDocumentFromToken(word string, docID uint32) error {
+func (c WaterTower) RemoveDocumentFromToken(word string, docID uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
@@ -356,7 +356,7 @@ func (c Client) RemoveDocumentFromToken(word string, docID uint32) error {
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (c Client) removeDocumentFromToken(word string, docID uint32) error {
+func (c WaterTower) removeDocumentFromToken(word string, docID uint32) error {
 	existingToken := TokenEntity{
 		Word: word,
 	}
@@ -382,11 +382,11 @@ func (c Client) removeDocumentFromToken(word string, docID uint32) error {
 	}
 }
 
-func (c Client) FindTags(tagNames ...string) ([]*Tag, error) {
+func (c WaterTower) FindTags(tagNames ...string) ([]*Tag, error) {
 	return c.FindTagsWithContext(c.ctx, tagNames...)
 }
 
-func (c Client) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]*Tag, error) {
+func (c WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]*Tag, error) {
 	if len(tagNames) == 0 {
 		return nil, nil
 	}
@@ -414,11 +414,11 @@ func (c Client) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]
 	return result, nil
 }
 
-func (c Client) FindTokens(words ...string) ([]*Token, error) {
+func (c WaterTower) FindTokens(words ...string) ([]*Token, error) {
 	return c.FindTokensWithContext(c.ctx, words...)
 }
 
-func (c Client) FindTokensWithContext(ctx context.Context, words ...string) ([]*Token, error) {
+func (c WaterTower) FindTokensWithContext(ctx context.Context, words ...string) ([]*Token, error) {
 	if len(words) == 0 {
 		return nil, nil
 	}
@@ -461,7 +461,7 @@ func (c Client) FindTokensWithContext(ctx context.Context, words ...string) ([]*
 	return result, nil
 }
 
-func (c Client) FindDocuments(ids ...uint32) ([]*Document, error) {
+func (c WaterTower) FindDocuments(ids ...uint32) ([]*Document, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -480,12 +480,12 @@ func (c Client) FindDocuments(ids ...uint32) ([]*Document, error) {
 	return result, nil
 }
 
-func (c Client) FindDocumentByKey(uniqueKey string) (*Document, error) {
+func (c WaterTower) FindDocumentByKey(uniqueKey string) (*Document, error) {
 	_, _, doc, err := c.findDocumentByKey(uniqueKey)
 	return doc, err
 }
 
-func (c Client) findDocumentByKey(uniqueKey string) (uint32, *DocumentKey, *Document, error) {
+func (c WaterTower) findDocumentByKey(uniqueKey string) (uint32, *DocumentKey, *Document, error) {
 	existingDocKey := DocumentKey{
 		UniqueKey: uniqueKey,
 	}

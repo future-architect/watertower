@@ -11,57 +11,51 @@ import (
 	_ "gocloud.dev/docstore/memdocstore"
 )
 
-func TestClient_PostDocument_IncrementID(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_PostDocument_IncrementID(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
-	docID, err := client.postDocumentKey("key")
+	docID, err := wt.postDocumentKey("key")
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), docID)
 
-	docID, err = client.postDocumentKey("new-key")
+	docID, err = wt.postDocumentKey("new-key")
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(2), docID)
 }
 
-func TestClient_incrementID(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_incrementID(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 	var lastID uint32
 	for i := 0; i < 100; i++ {
-		lastID, _ = client.incrementID()
+		lastID, _ = wt.incrementID()
 	}
 	assert.Equal(t, 100, int(lastID))
 }
 
-func TestClient_PostDocument(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_PostDocument(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
@@ -73,22 +67,22 @@ func TestClient_PostDocument(t *testing.T) {
 		Content:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
 		Summary:   "Summary",
 	}
-	docID, err := client.postDocumentKey("test")
+	docID, err := wt.postDocumentKey("test")
 	assert.Nil(t, err)
-	oldDoc, err := client.postDocument(docID, "test", doc)
+	oldDoc, err := wt.postDocument(docID, "test", doc)
 	assert.Nil(t, err)
 	assert.Nil(t, oldDoc)
 
-	loadedDocs, err := client.FindDocuments(docID)
+	loadedDocs, err := wt.FindDocuments(docID)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", loadedDocs[0].Title)
 
 	doc.Title = "new title"
-	oldDoc, err = client.postDocument(docID, "test", doc)
+	oldDoc, err = wt.postDocument(docID, "test", doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", oldDoc.Title)
 
-	loadedDoc, err := client.FindDocumentByKey("test")
+	loadedDoc, err := wt.FindDocumentByKey("test")
 	assert.Nil(t, err)
 	assert.Equal(t, "new title", loadedDoc.Title)
 }
@@ -160,93 +154,87 @@ func Test_grouping(t *testing.T) {
 	}
 }
 
-func TestClient_AddDocumentToTag(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_AddDocumentToTag(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
-	err = client.AddDocumentToTag("tag", 10)
+	err = wt.AddDocumentToTag("tag", 10)
 	assert.Nil(t, err)
 
-	err = client.AddDocumentToTag("tag", 14)
+	err = wt.AddDocumentToTag("tag", 14)
 	assert.Nil(t, err)
 
-	err = client.AddDocumentToTag("tag", 12)
+	err = wt.AddDocumentToTag("tag", 12)
 	assert.Nil(t, err)
 
-	tags, err := client.FindTags("tag")
+	tags, err := wt.FindTags("tag")
 	assert.Nil(t, err)
 	tag := tags[0]
 	assert.Equal(t, "tag", tag.Tag)
 	assert.EqualValues(t, []uint32{10, 12, 14}, tag.DocumentIDs)
 }
 
-func TestClient_RemoveDocumentFromTag(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_RemoveDocumentFromTag(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
-	client.AddDocumentToTag("tag", 10)
-	client.AddDocumentToTag("tag", 12)
+	wt.AddDocumentToTag("tag", 10)
+	wt.AddDocumentToTag("tag", 12)
 
 	// 12, 10 -> 10
-	err = client.RemoveDocumentFromTag("tag", 12)
+	err = wt.RemoveDocumentFromTag("tag", 12)
 	assert.Nil(t, err)
 
-	tags, err := client.FindTags("tag")
+	tags, err := wt.FindTags("tag")
 	assert.Nil(t, err)
 	tag := tags[0]
 	assert.Equal(t, "tag", tag.Tag)
 	assert.EqualValues(t, []uint32{10}, tag.DocumentIDs)
 
 	// 10 -> removed
-	err = client.RemoveDocumentFromTag("tag", 10)
+	err = wt.RemoveDocumentFromTag("tag", 10)
 	assert.Nil(t, err)
 
-	tags, err = client.FindTags("tag")
+	tags, err = wt.FindTags("tag")
 	assert.Error(t, err)
 	assert.Equal(t, 0, len(tags))
 }
 
-func TestClient_AddDocumentToToken(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_AddDocumentToToken(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
-	err = client.AddDocumentToToken("token", 10, []uint32{10, 20, 30})
+	err = wt.AddDocumentToToken("token", 10, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
-	err = client.AddDocumentToToken("token", 14, []uint32{10, 20, 30})
+	err = wt.AddDocumentToToken("token", 14, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
-	err = client.AddDocumentToToken("token", 12, []uint32{10, 20, 30})
+	err = wt.AddDocumentToToken("token", 12, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
-	tokens, err := client.FindTokens("token")
+	tokens, err := wt.FindTokens("token")
 	assert.Nil(t, err)
 	if len(tokens) > 0 {
 		token := tokens[0]
@@ -258,61 +246,57 @@ func TestClient_AddDocumentToToken(t *testing.T) {
 	}
 }
 
-func TestClient_RemoveDocumentFromToken(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+func Testwt_RemoveDocumentFromToken(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
-	client.AddDocumentToToken("token", 10, []uint32{10, 12, 14})
-	client.AddDocumentToToken("token", 12, []uint32{10, 12, 14})
+	wt.AddDocumentToToken("token", 10, []uint32{10, 12, 14})
+	wt.AddDocumentToToken("token", 12, []uint32{10, 12, 14})
 
 	// 12, 10 -> 10
-	err = client.RemoveDocumentFromToken("token", 12)
+	err = wt.RemoveDocumentFromToken("token", 12)
 	assert.Nil(t, err)
 
-	tokens, err := client.FindTokens("token")
+	tokens, err := wt.FindTokens("token")
 	assert.Nil(t, err)
 	assert.Equal(t, "token", tokens[0].Word)
 	postingMap := tokens[0].toPostingMap()
 	assert.EqualValues(t, []uint32{10, 12, 14}, postingMap[10].Positions)
 
 	// 10 -> removed
-	err = client.RemoveDocumentFromToken("token", 10)
+	err = wt.RemoveDocumentFromToken("token", 10)
 	assert.Nil(t, err)
 
-	tokens, err = client.FindTokens("token")
+	tokens, err = wt.FindTokens("token")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tokens))
 	assert.False(t, tokens[0].Found)
 }
 
 func TestFindTokens(t *testing.T) {
-	wt, err := NewWaterTower(Option{
+	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
-	client, err := wt.OpenClient(context.Background())
-	assert.Nil(t, err)
 	defer func() {
-		err := client.Close()
+		err := wt.Close()
 		assert.Nil(t, err)
 	}()
 
-	client.addDocumentToToken("test1", 1, []uint32{10, 20})
-	client.addDocumentToToken("test2", 1, []uint32{10, 20})
-	client.addDocumentToToken("test3", 1, []uint32{10, 20})
-	client.addDocumentToToken("test4", 1, []uint32{10, 20})
+	wt.addDocumentToToken("test1", 1, []uint32{10, 20})
+	wt.addDocumentToToken("test2", 1, []uint32{10, 20})
+	wt.addDocumentToToken("test3", 1, []uint32{10, 20})
+	wt.addDocumentToToken("test4", 1, []uint32{10, 20})
 
-	tokens, err := client.FindTokens("test1", "test2", "test3", "test4")
+	tokens, err := wt.FindTokens("test1", "test2", "test3", "test4")
 	assert.Nil(t, err)
 	t.Log(tokens)
 	assert.Equal(t, 4, len(tokens))

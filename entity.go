@@ -3,14 +3,19 @@ package watertower
 import "time"
 
 type Document struct {
-	ID        uint32    `json:"id,omitempty" docstore:"id"`
-	UniqueKey string    `json:"unique_key" docstore:"unique_key"`
-	Language  string    `json:"lang" docstore:"lang"`
-	Title     string    `json:"title" docstore:"title"`
-	UpdatedAt time.Time `json:"updated_at,omitempty" docstore:"updated_at"`
-	Tags      []string  `json:"tags" docstore:"tags"`
-	Content   string    `json:"content" docstore:"content"`
-	Summary   string    `json:"summary" docstore:"summary"`
+	ID          uint32            `json:"id,omitempty" docstore:"id"`
+	UniqueKey   string            `json:"unique_key" docstore:"unique_key"`
+	Language    string            `json:"lang" docstore:"lang"`
+	Title       string            `json:"title" docstore:"title"`
+	UpdatedAt   time.Time         `json:"updated_at,omitempty" docstore:"updated_at"`
+	Tags        []string          `json:"tags,omitempty" docstore:"tags"`
+	Content     string            `json:"content" docstore:"content"`
+	Metadata    map[string]string `json:"metadata,omitempty" docstore:"metadata"`
+	TitleTokens int               `json:"-" docstore:"title_tokens"`
+	Score       float64           `json:"score,omitempty" docstore:"-"`
+
+	Schema  string `json:"$schema,omitempty" docstore:"-"`
+	Comment string `json:"$comment,omitempty" docstore:"-"`
 }
 
 type DocumentKey struct {

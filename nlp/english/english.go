@@ -21,7 +21,7 @@ func englishSplitter(content string) []string {
 	words := strings.Fields(content)
 	result := make([]string, 0, len(words))
 	for _, word := range words {
-		word = strings.TrimRight(word, ".,")
+		word = strings.TrimRight(word, ".,:\"")
 		result = append(result, strings.ToLower(word))
 	}
 	return result

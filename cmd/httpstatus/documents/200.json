@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "200",
+  "lang": "en",
+  "title": "200 OK",
+  "content": "The request has succeeded. The meaning of the success depends on the HTTP method:\nGET: The resource has been fetched and is transmitted in the message body.\nHEAD: The entity headers are in the message body.\nPUT or POST: The resource describing the result of the action is transmitted in the message body.\nTRACE: The message body contains the request message as received by the server",
+  "tags": [
+    "200"
+  ]
+}

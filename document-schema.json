@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$ref": "#/definitions/Document",
+  "definitions": {
+    "Document": {
+      "required": [
+        "unique_key",
+        "lang",
+        "title",
+        "content"
+      ],
+      "properties": {
+        "$comment": {
+          "type": "string"
+        },
+        "$schema": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        },
+        "lang": {
+          "type": "string"
+        },
+        "metadata": {
+          "patternProperties": {
+            ".*": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "score": {
+          "type": "number"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "title": {
+          "type": "string"
+        },
+        "unique_key": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  }
+}

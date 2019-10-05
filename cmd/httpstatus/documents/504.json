@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "504",
+  "lang": "en",
+  "title": "504 Gateway Timeout",
+  "content": "This error response is given when the server is acting as a gateway and cannot get a response in time.",
+  "tags": [
+    "504"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "412",
+  "lang": "en",
+  "title": "412 Precondition Failed",
+  "content": "The client has indicated preconditions in its headers which the server does not meet.",
+  "tags": [
+    "412"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "425",
+  "lang": "en",
+  "title": "425 Too Early",
+  "content": "Indicates that the server is unwilling to risk processing a request that might be replayed.",
+  "tags": [
+    "425"
+  ]
+}

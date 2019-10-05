@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "418",
+  "lang": "en",
+  "title": "418 I'm a teapot",
+  "content": "The server refuses the attempt to brew coffee with a teapot.",
+  "tags": [
+    "418"
+  ]
+}

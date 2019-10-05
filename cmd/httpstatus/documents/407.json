@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "407",
+  "lang": "en",
+  "title": "407 Proxy Authentication Required",
+  "content": "This is similar to 401 but authentication is needed to be done by a proxy.",
+  "tags": [
+    "407"
+  ]
+}

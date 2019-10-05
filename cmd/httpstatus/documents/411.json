@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "411",
+  "lang": "en",
+  "title": "411 Length Required",
+  "content": "Server rejected the request because the Content-Length header field is not defined and the server requires it.",
+  "tags": [
+    "411"
+  ]
+}

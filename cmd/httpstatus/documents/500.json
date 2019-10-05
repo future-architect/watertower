@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "500",
+  "lang": "en",
+  "title": "500 Internal Server Error",
+  "content": "The server has encountered a situation it doesn't know how to handle.",
+  "tags": [
+    "500"
+  ]
+}

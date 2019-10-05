@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "403",
+  "lang": "en",
+  "title": "403 Forbidden",
+  "content": "The client does not have access rights to the content, i.e. they are unauthorized, so server is rejecting to give proper response. Unlike 401, the client's identity is known to the server.",
+  "tags": [
+    "403"
+  ]
+}

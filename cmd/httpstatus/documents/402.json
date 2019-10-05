@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "402",
+  "lang": "en",
+  "title": "402 Payment Required ",
+  "content": "This response code is reserved for future use. Initial aim for creating this code was using it for digital payment systems, however this status code is used very rarely and no standard convention exists.",
+  "tags": [
+    "402"
+  ]
+}

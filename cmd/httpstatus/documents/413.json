@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "413",
+  "lang": "en",
+  "title": "413 Payload Too Large",
+  "content": "Request entity is larger than limits defined by server; the server might close the connection or return an Retry-After header field.",
+  "tags": [
+    "413"
+  ]
+}

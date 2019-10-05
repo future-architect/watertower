@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "205",
+  "lang": "en",
+  "title": "205 Reset Content",
+  "content": "Tells the user-agent to reset the document which sent this request.",
+  "tags": [
+    "205"
+  ]
+}

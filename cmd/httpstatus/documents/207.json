@@ -1,0 +1,10 @@
+{
+  "$schema": "../../../document-schema.json",
+  "unique_key": "207",
+  "lang": "en",
+  "title": "207 Multi-Status (WebDAV)",
+  "content": "Conveys information about multiple resources, for situations where multiple status codes might be appropriate.",
+  "tags": [
+    "207"
+  ]
+}
