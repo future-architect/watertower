@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/shibukawa/watertower/nlp"
 	"golang.org/x/sync/errgroup"
+	"sort"
 )
 
 func (wt WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
@@ -60,21 +61,80 @@ func (wt WaterTower) Search(searchWord string, tags []string, lang string) ([]*D
 		return nil, err
 	}
 
-	docIDMap := make(map[uint32]bool)
+	var docIDs []uint32
 	if len(tags) > 0 && len(searchTokens) > 0 {
 		docIDGroups := append(tagDocIDGroups, tokenDocIDGroups...)
-		docIDMap = intersection(docIDGroups...)
+		docIDs = intersection(docIDGroups...)
 	} else if len(searchTokens) > 0 {
-		docIDMap = intersection(tokenDocIDGroups...)
+		docIDs = intersection(tokenDocIDGroups...)
 	} else {
 		// len(tags) > 0
-		docIDMap = intersection(tagDocIDGroups...)
+		docIDs = intersection(tagDocIDGroups...)
 	}
 
-	docIDs := make([]uint32, 0, len(docIDMap))
-	for docID := range docIDMap {
-		docIDs = append(docIDs, docID)
+	if len(searchTokens) > 0 {
+		docIDs, _ = phraseSearchFilter(docIDs, searchTokens, foundTokens)
 	}
 
-	return wt.FindDocuments(docIDs...)
+	docs, err := wt.FindDocuments(docIDs...)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
+}
+
+func phraseSearchFilter(docIDs []uint32, searchTokens map[string]*nlp.Token, foundTokens []*Token) (matchedDocIDs []uint32, foundPositions [][]uint32) {
+	for _, docID := range docIDs {
+		tokenPositionMap := convertToTokenPositionMap(foundTokens, docID)
+		var relativePositionGroups [][]uint32
+		for word, positionMap := range tokenPositionMap {
+			relativePositions := findPhraseMatchPositions(searchTokens[word], positionMap)
+			relativePositionGroups = append(relativePositionGroups, relativePositions)
+		}
+		relativePositions := intersection(relativePositionGroups...)
+		if len(relativePositions) > 0 {
+			matchedDocIDs = append(matchedDocIDs, docID)
+			foundPositions = append(foundPositions, relativePositions)
+		}
+	}
+	return
+}
+
+func findPhraseMatchPositions(token *nlp.Token, positionMap map[uint32]bool) []uint32 {
+	firstPos := token.Positions[0]
+	var result []uint32
+	for position := range positionMap {
+		match := true
+		for i := 1; i < len(token.Positions); i++ {
+			otherPos := token.Positions[i]
+			if !positionMap[position-firstPos+otherPos] {
+				match = false
+				break
+			}
+		}
+		if match {
+			result = append(result, position-firstPos)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i] < result[j]
+	})
+	return result
+}
+
+func convertToTokenPositionMap(foundTokens []*Token, docID uint32) map[string]map[uint32]bool {
+	foundTokenMaps := make(map[string]map[uint32]bool)
+	for _, foundToken := range foundTokens {
+		positionMap := make(map[uint32]bool)
+		for _, posting := range foundToken.Postings {
+			if posting.DocumentID == docID {
+				for _, pos := range posting.Positions {
+					positionMap[pos] = true
+				}
+				break
+			}
+		}
+		foundTokenMaps[foundToken.Word] = positionMap
+	}
+	return foundTokenMaps
 }

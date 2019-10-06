@@ -4,12 +4,12 @@ import (
 	"sort"
 )
 
-func intersection(sorted ...[]uint32) map[uint32]bool {
+func intersection(sorted ...[]uint32) []uint32 {
 	sort.Slice(sorted, func(i, j int) bool {
 		return len(sorted[i]) < len(sorted[j])
 	})
-	result := make(map[uint32]bool)
-	if len(sorted[0]) == 0 {
+	var result []uint32
+	if len(sorted) == 0 || len(sorted[0]) == 0 {
 		return result
 	}
 	cursors := make([]int, len(sorted))
@@ -42,7 +42,7 @@ func intersection(sorted ...[]uint32) map[uint32]bool {
 			break
 		}
 		if !needIncrement {
-			result[value] = true
+			result = append(result, value)
 		}
 	}
 	return result

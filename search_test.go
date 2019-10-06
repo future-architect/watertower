@@ -2,11 +2,13 @@ package watertower
 
 import (
 	"context"
+	"testing"
+
 	"github.com/rs/xid"
+	"github.com/shibukawa/watertower/nlp"
 	_ "github.com/shibukawa/watertower/nlp/english"
 	_ "github.com/shibukawa/watertower/nlp/japanese"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSearchEN(t *testing.T) {
@@ -166,4 +168,101 @@ func TestSearchJP(t *testing.T) {
 	docs, err := wt.Search("ドリル", nil, "ja")
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(docs))
+}
+
+func TestSearch_ByPhrase(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
+		CollectionPrefix: xid.New().String(),
+		DocumentUrl:      "mem://",
+	})
+	assert.Nil(t, err)
+	defer func() {
+		err := wt.Close()
+		assert.Nil(t, err)
+	}()
+	doc := &Document{
+		Language: "en",
+		Title:    "201 Created",
+		Content: `201 Created
+
+The request has succeeded and a new resource has been created as a result.
+This is typically the response sent after POST requests, or some PUT requests.`,
+		Tags: []string{"201"},
+	}
+
+	id, err := wt.PostDocument("201 Created", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(1), id)
+
+	testcases := []struct {
+		name       string
+		searchWord string
+		found      bool
+	}{
+		{
+			name:       "match",
+			searchWord: "POST request",
+			found:      true,
+		},
+		{
+			name:       "not match",
+			searchWord: "after request",
+			found:      false,
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			result, err := wt.Search(testcase.searchWord, nil, "en")
+			assert.Nil(t, err)
+			if testcase.found {
+				assert.NotEmpty(t, result)
+			} else {
+				assert.Empty(t, result)
+			}
+		})
+	}
+}
+
+func Test_findRelativePositions(t *testing.T) {
+	type args struct {
+		token       *nlp.Token
+		positionMap map[uint32]bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want []uint32
+	}{
+		{
+			name: "single word",
+			args: args{
+				token:       &nlp.Token{Positions: []uint32{1}},
+				positionMap: map[uint32]bool{10: true, 12: true},
+			},
+			want: []uint32{9, 11},
+		},
+		{
+			name: "several words",
+			args: args{
+				token:       &nlp.Token{Positions: []uint32{1, 3}},
+				positionMap: map[uint32]bool{10: true, 12: true, 15: true, 17: true, 20: true},
+			},
+			want: []uint32{9, 14},
+		},
+		{
+			name: "no match",
+			args: args{
+				token:       &nlp.Token{Positions: []uint32{1, 3}},
+				positionMap: map[uint32]bool{10: true, 20: true},
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := findPhraseMatchPositions(tt.args.token, tt.args.positionMap)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
