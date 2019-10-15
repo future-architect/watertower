@@ -2,6 +2,7 @@ package watertower
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,15 +18,15 @@ func TestDocStoreConflict(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 	doc := &Document{
-		ID:      1,
+		ID:      "1",
 		Title:   "test",
 		Content: "test",
 	}
 	// first create
-	err = wt.documents.Create(wt.ctx, doc)
+	err = wt.collection.Create(wt.ctx, doc)
 	assert.Nil(t, err)
 	// second create
-	err = wt.documents.Create(wt.ctx, doc)
+	err = wt.collection.Create(wt.ctx, doc)
 	assert.Error(t, err)
 }
 
@@ -39,10 +40,10 @@ func TestDocStoreNotFound(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 	doc := &Document{
-		ID: 1,
+		ID: "1",
 	}
 
-	err = wt.documents.Get(wt.ctx, doc)
+	err = wt.collection.Get(wt.ctx, doc)
 	t.Log(err)
 	assert.Error(t, err)
 }
@@ -67,8 +68,8 @@ func TestDocStore_Close(t *testing.T) {
 	assert.Nil(t, err)
 	defer wt2.Close()
 	doc2 := &Document{
-		ID: id,
+		ID: strconv.FormatUint(uint64(id), 10),
 	}
-	wt2.documents.Get(context.Background(), doc2)
+	wt2.collection.Get(context.Background(), doc2)
 	assert.Equal(t, "", doc2.Content)
 }

@@ -3,7 +3,7 @@ package watertower
 import "time"
 
 type Document struct {
-	ID             uint32            `json:"id,omitempty" docstore:"id"`
+	ID             string            `json:"-" docstore:"id"`
 	UniqueKey      string            `json:"unique_key" docstore:"unique_key"`
 	Language       string            `json:"lang" docstore:"lang"`
 	Title          string            `json:"title" docstore:"title"`
@@ -20,14 +20,15 @@ type Document struct {
 }
 
 type DocumentKey struct {
-	UniqueKey string `json:"unique_key" docstore:"unique_key"`
-	ID        uint32 `json:"id" docstore:"id"`
+	ID         string `json:"-" docstore:"id"`
+	UniqueKey  string `json:"unique_key" docstore:"unique_key"`
+	DocumentID uint32 `json:"docid" docstore:"docid"`
 }
 
 type Token struct {
-	Word     string    `json:"word"`
-	Found    bool      `json:"found"`
-	Postings []Posting `json:"postings"`
+	Word     string
+	Found    bool
+	Postings []Posting
 }
 
 func (t Token) toPostingMap() map[uint32]Posting {
@@ -39,7 +40,7 @@ func (t Token) toPostingMap() map[uint32]Posting {
 }
 
 type TokenEntity struct {
-	Word     string          `docstore:"word"`
+	ID       string          `docstore:"id"`
 	Postings []PostingEntity `docstore:"postings"`
 }
 
@@ -54,16 +55,16 @@ type PostingEntity struct {
 }
 
 type Tag struct {
-	Tag         string   `json:"tag" docstore:"tag"`
-	DocumentIDs []uint32 `json:"documentIDs" docstore:"documentIDs"`
+	ID          string   `docstore:"id"`
+	DocumentIDs []uint32 `docstore:"documentIDs"`
 }
 
 type TagEntity struct {
-	Tag         string `docstore:"tag"`
+	ID          string `docstore:"id"`
 	DocumentIDs []byte `docstore:"documentIDs"`
 }
 
-type UniqueID struct {
-	Collection string `docstore:"collection"`
-	LatestID   uint32 `docstore:"latestID"`
+type CounterEntity struct {
+	ID      string `docstore:"id"`
+	Counter int    `docstore:"counter"`
 }

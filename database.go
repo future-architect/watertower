@@ -8,6 +8,7 @@ import (
 	"gocloud.dev/docstore"
 	"reflect"
 	"sort"
+	"strconv"
 )
 
 func (wt WaterTower) PostDocument(uniqueKey string, document *Document) (uint32, error) {
@@ -48,58 +49,47 @@ func (wt WaterTower) PostDocument(uniqueKey string, document *Document) (uint32,
 }
 
 func (wt WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
+	id := "k" + uniqueKey
 	existingDocKey := DocumentKey{
-		UniqueKey: uniqueKey,
+		ID: id,
 	}
-	err := wt.docKeys.Get(wt.ctx, &existingDocKey)
+	err := wt.collection.Get(wt.ctx, &existingDocKey)
 	if err == nil {
-		return existingDocKey.ID, nil
+		return existingDocKey.DocumentID, nil
 	}
-	newID, err := wt.incrementID()
+	newID, err := wt.counter.Increment(wt.ctx, documentID)
 	if err != nil {
 		return 0, err
 	}
-	err = wt.docKeys.Create(wt.ctx, &DocumentKey{
-		UniqueKey: uniqueKey,
-		ID:        newID,
+	err = wt.collection.Create(wt.ctx, &DocumentKey{
+		ID:         id,
+		DocumentID: uint32(newID),
 	})
 	if err != nil {
 		return 0, err
 	}
-	return newID, nil
+	return uint32(newID), nil
 }
 
 func (wt WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
+	idStr := "d" + strconv.FormatUint(uint64(docID), 16)
 	existingDocument := Document{
-		ID: docID,
+		ID: idStr,
 	}
-	document.ID = docID
+	document.ID = idStr
 	document.UniqueKey = uniqueKey
 	document.WordCount = wordCount
 	document.TitleWordCount = titleWordCount
-	err := wt.documents.Get(wt.ctx, &existingDocument)
+	err := wt.collection.Get(wt.ctx, &existingDocument)
 	if err != nil {
-		return nil, wt.documents.Create(wt.ctx, document)
+		_, err = wt.counter.Increment(wt.ctx, documentCount)
+		if err != nil {
+			return nil, err
+		}
+		return nil, wt.collection.Create(wt.ctx, document)
 	} else {
-		return &existingDocument, wt.documents.Replace(wt.ctx, document)
+		return &existingDocument, wt.collection.Replace(wt.ctx, document)
 	}
-}
-
-func (wt WaterTower) incrementID() (uint32, error) {
-	uniqueID := UniqueID{
-		Collection: "documents",
-	}
-	latestUniqueID := UniqueID{
-		Collection: "documents",
-	}
-	err := wt.uniqueIDs.Actions().
-		Update(&uniqueID, docstore.Mods{"latestID": docstore.Increment(1)}).
-		Get(&latestUniqueID).
-		Do(wt.ctx)
-	if err != nil {
-		return 0, err
-	}
-	return latestUniqueID.LatestID, nil
 }
 
 func (wt WaterTower) RemoveDocument(uniqueKey string) error {
@@ -107,11 +97,15 @@ func (wt WaterTower) RemoveDocument(uniqueKey string) error {
 	if err != nil {
 		return err
 	}
-	err = wt.docKeys.Delete(wt.ctx, existingDocKey)
+	err = wt.collection.Delete(wt.ctx, existingDocKey)
 	if err != nil {
 		return err
 	}
-	err = wt.documents.Delete(wt.ctx, oldDoc)
+	err = wt.collection.Delete(wt.ctx, oldDoc)
+	if err != nil {
+		return err
+	}
+	err = wt.counter.Decrement(wt.ctx, documentCount)
 	if err != nil {
 		return err
 	}
@@ -229,15 +223,15 @@ func (wt WaterTower) AddDocumentToTag(tag string, docID uint32) error {
 
 func (wt WaterTower) addDocumentToTag(tag string, docID uint32) error {
 	existingTag := TagEntity{
-		Tag: tag,
+		ID: "t" + tag,
 	}
-	err := wt.tags.Get(wt.ctx, &existingTag)
+	err := wt.collection.Get(wt.ctx, &existingTag)
 	if err != nil {
 		tag := TagEntity{
-			Tag:         tag,
+			ID:          "t" + tag,
 			DocumentIDs: compints.CompressToBytes([]uint32{docID}, true),
 		}
-		return wt.tags.Create(wt.ctx, &tag)
+		return wt.collection.Create(wt.ctx, &tag)
 	} else {
 		docIDs, err := compints.DecompressFromBytes(existingTag.DocumentIDs, true)
 		if err != nil {
@@ -248,10 +242,10 @@ func (wt WaterTower) addDocumentToTag(tag string, docID uint32) error {
 			return docIDs[i] < docIDs[j]
 		})
 		newTag := &TagEntity{
-			Tag:         tag,
+			ID:          "t" + tag,
 			DocumentIDs: compints.CompressToBytes(docIDs, true),
 		}
-		err = wt.tags.Replace(wt.ctx, newTag)
+		err = wt.collection.Replace(wt.ctx, newTag)
 		if err != nil {
 			return fmt.Errorf("fail to replace tag: '%s': %w", tag, err)
 		}
@@ -275,9 +269,9 @@ func (wt WaterTower) RemoveDocumentFromTag(tag string, docID uint32) error {
 
 func (wt WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 	existingTag := TagEntity{
-		Tag: tag,
+		ID: "t" + tag,
 	}
-	err := wt.tags.Get(wt.ctx, &existingTag)
+	err := wt.collection.Get(wt.ctx, &existingTag)
 	if err != nil {
 		return err
 	}
@@ -292,14 +286,14 @@ func (wt WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 		}
 	}
 	if len(newDocIDs) == 0 {
-		return wt.tags.Delete(wt.ctx, &existingTag)
+		return wt.collection.Delete(wt.ctx, &existingTag)
 	} else {
 		newTag := &TagEntity{
-			Tag:         tag,
+			ID:          "t" + tag,
 			DocumentIDs: compints.CompressToBytes(newDocIDs, true),
 		}
 		existingTag.DocumentIDs = compints.CompressToBytes(newDocIDs, true)
-		return wt.tags.Replace(wt.ctx, newTag)
+		return wt.collection.Replace(wt.ctx, newTag)
 	}
 }
 
@@ -319,28 +313,28 @@ func (wt WaterTower) AddDocumentToToken(word string, docID uint32, positions []u
 
 func (wt WaterTower) addDocumentToToken(word string, docID uint32, positions []uint32) error {
 	existingToken := TokenEntity{
-		Word: word,
+		ID: "w" + word,
 	}
-	err := wt.tokens.Get(wt.ctx, &existingToken)
+	err := wt.collection.Get(wt.ctx, &existingToken)
 	postingEntity := PostingEntity{
 		DocumentID: docID,
 		Positions:  compints.CompressToBytes(positions, true),
 	}
 	if err != nil {
 		token := TokenEntity{
-			Word:     word,
+			ID:       "w" + word,
 			Postings: []PostingEntity{postingEntity},
 		}
-		return wt.tokens.Create(wt.ctx, &token)
+		return wt.collection.Create(wt.ctx, &token)
 	} else {
 		newToken := TokenEntity{
-			Word:     word,
+			ID:       "w" + word,
 			Postings: append(existingToken.Postings, postingEntity),
 		}
 		sort.Slice(newToken.Postings, func(i, j int) bool {
 			return newToken.Postings[i].DocumentID < newToken.Postings[j].DocumentID
 		})
-		err = wt.tokens.Replace(wt.ctx, &newToken)
+		err = wt.collection.Replace(wt.ctx, &newToken)
 		if err != nil {
 			return fmt.Errorf("fail to replace token: '%s': %w", word, err)
 		}
@@ -364,9 +358,9 @@ func (wt WaterTower) RemoveDocumentFromToken(word string, docID uint32) error {
 
 func (wt WaterTower) removeDocumentFromToken(word string, docID uint32) error {
 	existingToken := TokenEntity{
-		Word: word,
+		ID: "w" + word,
 	}
-	err := wt.tokens.Get(wt.ctx, &existingToken)
+	err := wt.collection.Get(wt.ctx, &existingToken)
 	if err != nil {
 		return err
 	} else {
@@ -377,13 +371,13 @@ func (wt WaterTower) removeDocumentFromToken(word string, docID uint32) error {
 			}
 		}
 		if len(newPostings) == 0 {
-			return wt.tokens.Delete(wt.ctx, &existingToken)
+			return wt.collection.Delete(wt.ctx, &existingToken)
 		} else {
 			newToken := TokenEntity{
-				Word:     word,
+				ID:       "w" + word,
 				Postings: newPostings,
 			}
-			return wt.tokens.Replace(wt.ctx, &newToken)
+			return wt.collection.Replace(wt.ctx, &newToken)
 		}
 	}
 }
@@ -397,9 +391,9 @@ func (wt WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string
 		return nil, nil
 	}
 	existingTags := make([]TagEntity, len(tagNames))
-	actions := wt.tags.Actions()
+	actions := wt.collection.Actions()
 	for i, tagName := range tagNames {
-		existingTags[i].Tag = tagName
+		existingTags[i].ID = "t" + tagName
 		actions = actions.Get(&existingTags[i])
 	}
 	err := actions.Do(ctx)
@@ -413,7 +407,7 @@ func (wt WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string
 			return nil, err
 		}
 		result[i] = &Tag{
-			Tag:         existingTag.Tag,
+			ID:          existingTag.ID[1:],
 			DocumentIDs: docIDs,
 		}
 	}
@@ -433,9 +427,9 @@ func (wt WaterTower) FindTokensWithContext(ctx context.Context, words ...string)
 		positions[word] = append(positions[word], i)
 	}
 	existingTokens := make([]TokenEntity, len(positions))
-	actions := wt.tokens.Actions()
+	actions := wt.collection.Actions()
 	for i, word := range words {
-		existingTokens[i].Word = word
+		existingTokens[i].ID = "w" + word
 		actions = actions.Get(&existingTokens[i])
 	}
 	hasErrors := make(map[int]bool)
@@ -447,20 +441,20 @@ func (wt WaterTower) FindTokensWithContext(ctx context.Context, words ...string)
 	result := make([]*Token, len(words))
 	for i, existingToken := range existingTokens {
 		token := &Token{
-			Word:  existingToken.Word,
+			Word:  existingToken.ID[1:],
 			Found: !hasErrors[i],
 		}
 		for _, posting := range existingToken.Postings {
 			positions, err := compints.DecompressFromBytes(posting.Positions, true)
 			if err != nil {
-				return nil, fmt.Errorf("Compressed data is broken of position of doc %d of token %s: %w", posting.DocumentID, existingToken.Word, err)
+				return nil, fmt.Errorf("Compressed data is broken of position of doc %d of token %s: %w", posting.DocumentID, existingToken.ID[1:], err)
 			}
 			token.Postings = append(token.Postings, Posting{
 				DocumentID: posting.DocumentID,
 				Positions:  positions,
 			})
 		}
-		for _, pos := range positions[existingToken.Word] {
+		for _, pos := range positions[existingToken.ID[1:]] {
 			result[pos] = token
 		}
 	}
@@ -472,10 +466,10 @@ func (wt WaterTower) FindDocuments(ids ...uint32) ([]*Document, error) {
 		return nil, nil
 	}
 	result := make([]*Document, len(ids))
-	actions := wt.documents.Actions()
+	actions := wt.collection.Actions()
 	for i, id := range ids {
 		result[i] = &Document{
-			ID: id,
+			ID: "d" + strconv.FormatUint(uint64(id), 16),
 		}
 		actions = actions.Get(result[i])
 	}
@@ -493,17 +487,17 @@ func (wt WaterTower) FindDocumentByKey(uniqueKey string) (*Document, error) {
 
 func (wt WaterTower) findDocumentByKey(uniqueKey string) (uint32, *DocumentKey, *Document, error) {
 	existingDocKey := DocumentKey{
-		UniqueKey: uniqueKey,
+		ID: "k" + uniqueKey,
 	}
-	err := wt.docKeys.Get(wt.ctx, &existingDocKey)
+	err := wt.collection.Get(wt.ctx, &existingDocKey)
 	if err != nil {
 		return 0, nil, nil, err
 	}
-	docID := existingDocKey.ID
+	docID := existingDocKey.DocumentID
 	oldDoc := Document{
-		ID: docID,
+		ID: "d" + strconv.FormatUint(uint64(docID), 16),
 	}
-	err = wt.documents.Get(wt.ctx, &oldDoc)
+	err = wt.collection.Get(wt.ctx, &oldDoc)
 	if err != nil {
 		return 0, nil, nil, err
 	}

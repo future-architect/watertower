@@ -143,10 +143,12 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
 github.com/rs/xid v1.2.1 h1:mhH9Nq+C1fY2l1XIpgxIiUOfNpRBYH1kKcr+qfKgjRc=
 github.com/rs/xid v1.2.1/go.mod h1:+uKXf+4Djp6Md1KODXJxgGQPKngRmWyn10oCKFzNHOQ=
+github.com/shibukawa/cloudcounter v0.0.2 h1:7wRTy8Czcng6gDDfgafpTYvf9iaJEgvlXSRt4pEUvSw=
+github.com/shibukawa/cloudcounter v0.0.2/go.mod h1:Q427sORCVGVQduGk/zgjuTbIH9m+z38Xlyqn98WHPWY=
 github.com/shibukawa/compints v0.1.0 h1:xMwWg1+qRstCyfQvVO5sARKzIud+7y/ZdtEFlGbCe7A=
 github.com/shibukawa/compints v0.1.0/go.mod h1:Aa0Jh6xk77xkIWPojTVZeqA/PymjpHlM2MzM6vX2fx8=
-github.com/shibukawa/gocloudurls v1.0.2 h1:Yyg4kDbdUfq7aQuYEu4eEF36eA2mJ/ddUtWLuMufl0w=
-github.com/shibukawa/gocloudurls v1.0.2/go.mod h1:8xfK4m/GM5Mg8I80F9eIJqpR73k2g4/qrE9pSDy+AF4=
+github.com/shibukawa/gocloudurls v1.0.3 h1:yVuVb634Pfsb11nQEesJ0KKbJ2wglpUq9ghNy5stgRI=
+github.com/shibukawa/gocloudurls v1.0.3/go.mod h1:8xfK4m/GM5Mg8I80F9eIJqpR73k2g4/qrE9pSDy+AF4=
 github.com/shibukawa/zipsection v0.0.0-20180410220334-96c656c9b295 h1:Box4rzQRBrBH9SP0o+04OKm04paZpUzAANj46b6fdZM=
 github.com/shibukawa/zipsection v0.0.0-20180410220334-96c656c9b295/go.mod h1:ca7ehhvUg8ji/XUsVDw59duFnFQYsiorbAdYvHwEpww=
 github.com/simplereach/timeutils v1.2.0/go.mod h1:VVbQDfN/FHRZa1LSqcwo4kNZ62OOyqLLGQKYB3pB0Q8=

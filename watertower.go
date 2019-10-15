@@ -3,37 +3,57 @@ package watertower
 import (
 	"context"
 	"errors"
-	"github.com/shibukawa/gocloudurls"
-	"gocloud.dev/docstore"
-	_ "gocloud.dev/pubsub/mempubsub"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/shibukawa/cloudcounter"
+	"github.com/shibukawa/gocloudurls"
+	"gocloud.dev/docstore"
+	_ "gocloud.dev/pubsub/mempubsub"
 )
 
-func localFilePath(filename, folder string) string {
-	if folder == "" {
-		return ""
-	}
-	return filepath.Join(folder, filename)
-}
-
 type WaterTower struct {
-	ctx       context.Context
-	documents *docstore.Collection
-	docKeys   *docstore.Collection
-	uniqueIDs *docstore.Collection
-	tokens    *docstore.Collection
-	tags      *docstore.Collection
-	close     sync.Once
+	ctx        context.Context
+	collection *docstore.Collection
+	counter    *cloudcounter.Counter
+	close      sync.Once
 }
 
 type Option struct {
-	DocumentUrl      string
-	LocalFolder      string
-	CollectionPrefix string
-	CustomFanOut     string
-	TitleScoreRatio  float64
+	DocumentUrl        string
+	CollectionOpener   func(ctx context.Context, documentURL, collectionPrefix, localFolder string) (*docstore.Collection, error)
+	LocalFolder        string
+	CollectionPrefix   string
+	CustomFanOut       string
+	CounterConcurrency int
+	TitleScoreRatio    float64
+}
+
+const (
+	documentID    cloudcounter.CounterKey = "document_id"
+	documentCount                         = "document_count"
+)
+
+func DefaultCollectionOpener(ctx context.Context, documentURL, collectionPrefix, localFolder string) (*docstore.Collection, error) {
+	var filename string
+	if localFolder != "" {
+		filename = filepath.Join(localFolder, "watertower.db")
+	}
+	url, err := gocloudurls.NormalizeDocStoreURL(documentURL, gocloudurls.Option{
+		Collection: collectionPrefix + "watertower",
+		KeyName:    "id",
+		FileName:   filename,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Can't parse document URL: %w", err)
+	}
+	collection, err := docstore.OpenCollection(ctx, url)
+	if err != nil {
+		return nil, fmt.Errorf("Can't open collection: %w", err)
+	}
+	return collection, nil
 }
 
 func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
@@ -47,48 +67,34 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	if option.DocumentUrl == "" {
 		return nil, errors.New("NewInvertedIndex: DocumentUrl is missign")
 	}
+	if option.CollectionOpener == nil {
+		option.CollectionOpener = DefaultCollectionOpener
+	}
 	if option.TitleScoreRatio == 0.0 {
 		option.TitleScoreRatio = 5.0
 	}
-	finalError := &CombinedError{
-		Message: "Can't open collections for search engine",
+	if option.CounterConcurrency == 0 {
+		option.CounterConcurrency = 5
 	}
 	result := &WaterTower{
 		ctx: ctx,
 	}
-	configCollection := func(collectionName, keyName, fileName string) *docstore.Collection {
-		url, err := gocloudurls.NormalizeDocStoreURL(option.DocumentUrl, gocloudurls.Option{
-			Collection: collectionName,
-			KeyName:    keyName,
-			FileName:   localFilePath(fileName, option.LocalFolder),
-		})
-		if err != nil {
-			finalError.append(err)
-			return nil
-		} else {
-			collection, err := docstore.OpenCollection(ctx, url)
-			if err != nil {
-				finalError.append(err)
-				return nil
-			}
-			return collection
-		}
-	}
-	result.documents = configCollection(option.CollectionPrefix+"documents", "id", "documents.db")
-	result.docKeys = configCollection(option.CollectionPrefix+"dockeys", "unique_key", "dockeys.db")
-	result.uniqueIDs = configCollection(option.CollectionPrefix+"uniqueids", "collection", "docids.db")
-	result.tokens = configCollection(option.CollectionPrefix+"tokens", "word", "tokens.db")
-	result.tags = configCollection(option.CollectionPrefix+"tags", "tag", "tags.db")
-	if len(finalError.Errors) > 0 {
-		return nil, finalError
-	}
-	uniqueID := UniqueID{
-		Collection: "documents",
-		LatestID:   0,
-	}
-	err := result.uniqueIDs.Get(ctx, &uniqueID)
+	collection, err := option.CollectionOpener(ctx, option.DocumentUrl, option.CollectionPrefix, option.LocalFolder)
 	if err != nil {
-		result.uniqueIDs.Create(ctx, &uniqueID)
+		return nil, err
+	}
+	result.collection = collection
+	result.counter = cloudcounter.NewCounter(collection, cloudcounter.Option{
+		Concurrency: option.CounterConcurrency,
+		Prefix:      option.CollectionPrefix + "c",
+	})
+	err = result.counter.Register(ctx, documentID)
+	if err != nil {
+		return nil, err
+	}
+	err = result.counter.Register(ctx, documentCount)
+	if err != nil {
+		return nil, err
 	}
 	go func() {
 		<-ctx.Done()
@@ -97,19 +103,9 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	return result, nil
 }
 
-func (wt *WaterTower) Close() (errors error) {
-	finalError := &CombinedError{
-		Message: "Can't close collections for search engine",
-	}
+func (wt *WaterTower) Close() (err error) {
 	wt.close.Do(func() {
-		finalError.appendIfError(wt.documents.Close())
-		finalError.appendIfError(wt.docKeys.Close())
-		finalError.appendIfError(wt.uniqueIDs.Close())
-		finalError.appendIfError(wt.tokens.Close())
-		finalError.appendIfError(wt.tags.Close())
+		err = wt.collection.Close()
 	})
-	if finalError.Errors != nil {
-		return finalError
-	}
-	return nil
+	return
 }

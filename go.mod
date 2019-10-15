@@ -13,8 +13,9 @@ require (
 	github.com/ikawaha/kagome.ipadic v1.1.0
 	github.com/kljensen/snowball v0.6.0
 	github.com/rs/xid v1.2.1
+	github.com/shibukawa/cloudcounter v0.0.2
 	github.com/shibukawa/compints v0.1.0
-	github.com/shibukawa/gocloudurls v1.0.2
+	github.com/shibukawa/gocloudurls v1.0.3
 	github.com/stretchr/testify v1.4.0
 	go.pyspa.org/brbundle v1.1.2
 	gocloud.dev v0.17.0

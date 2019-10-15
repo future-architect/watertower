@@ -31,23 +31,6 @@ func Test_PostDocument_IncrementID(t *testing.T) {
 	assert.Equal(t, uint32(2), docID)
 }
 
-func Test_incrementID(t *testing.T) {
-	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
-		DocumentUrl:      "mem://",
-	})
-	assert.Nil(t, err)
-	defer func() {
-		err := wt.Close()
-		assert.Nil(t, err)
-	}()
-	var lastID uint32
-	for i := 0; i < 100; i++ {
-		lastID, _ = wt.incrementID()
-	}
-	assert.Equal(t, 100, int(lastID))
-}
-
 func Test_PostDocument(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
@@ -179,7 +162,7 @@ func Test_AddDocumentToTag(t *testing.T) {
 	tags, err := wt.FindTags("tag")
 	assert.Nil(t, err)
 	tag := tags[0]
-	assert.Equal(t, "tag", tag.Tag)
+	assert.Equal(t, "tag", tag.ID)
 	assert.EqualValues(t, []uint32{10, 12, 14}, tag.DocumentIDs)
 }
 
@@ -204,7 +187,7 @@ func Testwt_RemoveDocumentFromTag(t *testing.T) {
 	tags, err := wt.FindTags("tag")
 	assert.Nil(t, err)
 	tag := tags[0]
-	assert.Equal(t, "tag", tag.Tag)
+	assert.Equal(t, "tag", tag.ID)
 	assert.EqualValues(t, []uint32{10}, tag.DocumentIDs)
 
 	// 10 -> removed
