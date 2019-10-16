@@ -266,3 +266,24 @@ func Test_findRelativePositions(t *testing.T) {
 		})
 	}
 }
+
+func TestCalcScore(t *testing.T) {
+	foundTokens := []*Token{
+		{
+			Word:  "first",
+			Found: false,
+			Postings: []Posting{
+				{
+					DocumentID: 3,
+					Positions:  []uint32{1, 2, 3},
+				},
+				{
+					DocumentID: 4,
+					Positions:  []uint32{4, 5, 6, 7},
+				},
+			},
+		},
+	}
+	docCount := 10
+	assert.Less(t, calcScore(foundTokens, docCount, 3), calcScore(foundTokens, docCount, 4))
+}

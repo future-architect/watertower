@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/shibukawa/watertower/nlp"
 	"golang.org/x/sync/errgroup"
+	"math"
 	"sort"
 )
 
@@ -37,6 +38,12 @@ func (wt WaterTower) Search(searchWord string, tags []string, lang string) ([]*D
 
 	var foundTokens []*Token
 	var tokenDocIDGroups [][]uint32
+	var docCount int
+
+	errGroup.Go(func() (err error) {
+		docCount, err = wt.counter.Get(ctx, documentCount)
+		return
+	})
 
 	if len(searchTokens) > 0 {
 		errGroup.Go(func() (err error) {
@@ -80,6 +87,12 @@ func (wt WaterTower) Search(searchWord string, tags []string, lang string) ([]*D
 	if err != nil {
 		return nil, err
 	}
+	for i, doc := range docs {
+		doc.Score = calcScore(foundTokens, docCount, docIDs[i])
+	}
+	sort.Slice(docs, func(i, j int) bool {
+		return docs[i].Score < docs[j].Score
+	})
 	return docs, nil
 }
 
@@ -137,4 +150,25 @@ func convertToTokenPositionMap(foundTokens []*Token, docID uint32) map[string]ma
 		foundTokenMaps[foundToken.Word] = positionMap
 	}
 	return foundTokenMaps
+}
+
+func calcScore(foundTokens []*Token, docCount int, documentID uint32) float64 {
+	var totalScore float64
+	for _, token := range foundTokens {
+		for _, posting := range token.Postings {
+			if posting.DocumentID == documentID {
+				totalScore += tfIdfScore(len(posting.Positions), docCount, len(token.Postings))
+			}
+		}
+	}
+	return totalScore
+}
+
+func tfIdfScore(tokenCount, allDocCount, docCount int) float64 {
+	var tf float64
+	if tokenCount > 0 {
+		tf = 1.0 + math.Log(float64(tokenCount))
+	}
+	idf := math.Log(float64(allDocCount) / float64(docCount))
+	return tf * idf
 }
