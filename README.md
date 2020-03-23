@@ -2,6 +2,8 @@
 
 ![watertower](website/watertower.jpg)`
 
+[© Copyright Steve Daniels and licensed under CC BY-SA 2.0](https://www.geograph.org.uk/photo/3103724)
+
 Search Engine for Serverless environment.
 
 * Search via words in documents
