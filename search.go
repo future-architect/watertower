@@ -8,7 +8,7 @@ import (
 	"sort"
 )
 
-func (wt WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
+func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
 	tokenizer, err := nlp.FindTokenizer(lang)
 	if err != nil {
 		return nil, fmt.Errorf("tokenizer for language '%s' is not found: %w", lang, err)

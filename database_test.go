@@ -150,13 +150,13 @@ func Test_AddDocumentToTag(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	err = wt.AddDocumentToTag("tag", 10)
+	err = wt.addTagToDocumentID("tag", 10)
 	assert.Nil(t, err)
 
-	err = wt.AddDocumentToTag("tag", 14)
+	err = wt.addTagToDocumentID("tag", 14)
 	assert.Nil(t, err)
 
-	err = wt.AddDocumentToTag("tag", 12)
+	err = wt.addTagToDocumentID("tag", 12)
 	assert.Nil(t, err)
 
 	tags, err := wt.FindTags("tag")
@@ -166,7 +166,7 @@ func Test_AddDocumentToTag(t *testing.T) {
 	assert.EqualValues(t, []uint32{10, 12, 14}, tag.DocumentIDs)
 }
 
-func Testwt_RemoveDocumentFromTag(t *testing.T) {
+func Test_RemoveDocumentFromTag(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
 		CollectionPrefix: xid.New().String(),
 		DocumentUrl:      "mem://",
@@ -177,8 +177,8 @@ func Testwt_RemoveDocumentFromTag(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	wt.AddDocumentToTag("tag", 10)
-	wt.AddDocumentToTag("tag", 12)
+	wt.addTagToDocumentID("tag", 10)
+	wt.addTagToDocumentID("tag", 12)
 
 	// 12, 10 -> 10
 	err = wt.RemoveDocumentFromTag("tag", 12)
@@ -210,13 +210,13 @@ func Test_AddDocumentToToken(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	err = wt.AddDocumentToToken("token", 10, []uint32{10, 20, 30})
+	err = wt.addDocumentToToken("token", 10, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
-	err = wt.AddDocumentToToken("token", 14, []uint32{10, 20, 30})
+	err = wt.addDocumentToToken("token", 14, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
-	err = wt.AddDocumentToToken("token", 12, []uint32{10, 20, 30})
+	err = wt.addDocumentToToken("token", 12, []uint32{10, 20, 30})
 	assert.Nil(t, err)
 
 	tokens, err := wt.FindTokens("token")
@@ -242,11 +242,11 @@ func Test_RemoveDocumentFromToken(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	wt.AddDocumentToToken("token", 10, []uint32{10, 12, 14})
-	wt.AddDocumentToToken("token", 12, []uint32{10, 12, 14})
+	wt.addDocumentToToken("token", 10, []uint32{10, 12, 14})
+	wt.addDocumentToToken("token", 12, []uint32{10, 12, 14})
 
 	// 12, 10 -> 10
-	err = wt.RemoveDocumentFromToken("token", 12)
+	err = wt.removeDocumentFromToken("token", 12)
 	assert.Nil(t, err)
 
 	tokens, err := wt.FindTokens("token")
@@ -256,7 +256,7 @@ func Test_RemoveDocumentFromToken(t *testing.T) {
 	assert.EqualValues(t, []uint32{10, 12, 14}, postingMap[10].Positions)
 
 	// 10 -> removed
-	err = wt.RemoveDocumentFromToken("token", 10)
+	err = wt.removeDocumentFromToken("token", 10)
 	assert.Nil(t, err)
 
 	tokens, err = wt.FindTokens("token")
@@ -276,10 +276,10 @@ func TestFindTokens(t *testing.T) {
 		assert.Nil(t, err)
 	}()
 
-	wt.addDocumentToToken("test1", 1, []uint32{10, 20})
-	wt.addDocumentToToken("test2", 1, []uint32{10, 20})
-	wt.addDocumentToToken("test3", 1, []uint32{10, 20})
-	wt.addDocumentToToken("test4", 1, []uint32{10, 20})
+	wt.addDocumentIDToToken("test1", 1, []uint32{10, 20})
+	wt.addDocumentIDToToken("test2", 1, []uint32{10, 20})
+	wt.addDocumentIDToToken("test3", 1, []uint32{10, 20})
+	wt.addDocumentIDToToken("test4", 1, []uint32{10, 20})
 
 	tokens, err := wt.FindTokens("test1", "test2", "test3", "test4")
 	assert.Nil(t, err)

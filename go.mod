@@ -8,7 +8,6 @@ require (
 	github.com/alecthomas/jsonschema v0.0.0-20190626084004-00dfc6288dec
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/fatih/color v1.7.0
-	github.com/gabriel-vasile/mimetype v0.3.18 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/ikawaha/kagome.ipadic v1.1.0
 	github.com/kljensen/snowball v0.6.0

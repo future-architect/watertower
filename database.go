@@ -3,15 +3,23 @@ package watertower
 import (
 	"context"
 	"fmt"
-	"github.com/shibukawa/compints"
-	"github.com/shibukawa/watertower/nlp"
-	"gocloud.dev/docstore"
 	"reflect"
 	"sort"
 	"strconv"
+
+	"github.com/shibukawa/compints"
+	"github.com/shibukawa/watertower/nlp"
+	"gocloud.dev/docstore"
 )
 
-func (wt WaterTower) PostDocument(uniqueKey string, document *Document) (uint32, error) {
+// PostDocument registers single document to storage and update index
+//
+// uniqueKey is a key of document like URL.
+//
+// document's title and content fields are indexed and searched via natural language algorithms (tokenize, stemming).
+//
+// document's tags field contains texts and filter documents via complete match algorithm.
+func (wt *WaterTower) PostDocument(uniqueKey string, document *Document) (uint32, error) {
 	retryCount := 50
 	var lastError error
 	var docID uint32
@@ -48,7 +56,7 @@ func (wt WaterTower) PostDocument(uniqueKey string, document *Document) (uint32,
 	return 0, fmt.Errorf("fail to register document: %w", lastError)
 }
 
-func (wt WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
+func (wt *WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
 	id := "k" + uniqueKey
 	existingDocKey := DocumentKey{
 		ID: id,
@@ -71,7 +79,7 @@ func (wt WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
 	return uint32(newID), nil
 }
 
-func (wt WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
+func (wt *WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
 	idStr := "d" + strconv.FormatUint(uint64(docID), 16)
 	existingDocument := Document{
 		ID: idStr,
@@ -92,7 +100,8 @@ func (wt WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, tit
 	}
 }
 
-func (wt WaterTower) RemoveDocument(uniqueKey string) error {
+// RemoveDocument removes document via uniqueKey
+func (wt *WaterTower) RemoveDocument(uniqueKey string) error {
 	docID, existingDocKey, oldDoc, err := wt.findDocumentByKey(uniqueKey)
 	if err != nil {
 		return err
@@ -116,7 +125,7 @@ func (wt WaterTower) RemoveDocument(uniqueKey string) error {
 	return wt.updateTagsAndTokens(docID, tags, nil, tokens, nil)
 }
 
-func (wt WaterTower) analyzeDocument(label string, document *Document) (tags []string, tokens map[string]*nlp.Token, wordCount, titleWordCount int, err error) {
+func (wt *WaterTower) analyzeDocument(label string, document *Document) (tags []string, tokens map[string]*nlp.Token, wordCount, titleWordCount int, err error) {
 	if document == nil {
 		return nil, make(map[string]*nlp.Token), 0, 0, nil
 	}
@@ -129,11 +138,11 @@ func (wt WaterTower) analyzeDocument(label string, document *Document) (tags []s
 	return document.Tags, tokens, wordCount, titleWordCount, nil
 }
 
-func (wt WaterTower) updateTagsAndTokens(docID uint32, oldTags, newTags []string, oldDocTokens, newDocTokens map[string]*nlp.Token) error {
+func (wt *WaterTower) updateTagsAndTokens(docID uint32, oldTags, newTags []string, oldDocTokens, newDocTokens map[string]*nlp.Token) error {
 	// update tags
 	newTags, deletedTags := groupingTags(oldTags, newTags)
 	for _, tag := range newTags {
-		err := wt.AddDocumentToTag(tag, docID)
+		err := wt.addTagToDocumentID(tag, docID)
 		if err != nil {
 			return err
 		}
@@ -148,19 +157,19 @@ func (wt WaterTower) updateTagsAndTokens(docID uint32, oldTags, newTags []string
 	// update tokens
 	newTokens, deletedTokens, updateTokens := groupingTokens(oldDocTokens, newDocTokens)
 	for _, token := range newTokens {
-		err := wt.AddDocumentToToken(token.Word, docID, token.Positions)
+		err := wt.addDocumentToToken(token.Word, docID, token.Positions)
 		if err != nil {
 			return err
 		}
 	}
 	for _, token := range deletedTokens {
-		err := wt.RemoveDocumentFromToken(token.Word, docID)
+		err := wt.removeDocumentFromToken(token.Word, docID)
 		if err != nil {
 			return err
 		}
 	}
 	for _, token := range updateTokens {
-		err := wt.AddDocumentToToken(token.Word, docID, token.Positions)
+		err := wt.addDocumentToToken(token.Word, docID, token.Positions)
 		if err != nil {
 			return err
 		}
@@ -207,11 +216,16 @@ func groupingTokens(oldGroup, newGroup map[string]*nlp.Token) (newItems, deleted
 	return
 }
 
-func (wt WaterTower) AddDocumentToTag(tag string, docID uint32) error {
+// AddTagToDocument adds tag to existing document.
+func (wt *WaterTower) AddTagToDocument(tag, uniqueKey string) error {
+	return nil
+}
+
+func (wt *WaterTower) addTagToDocumentID(tag string, docID uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
-		err := wt.addDocumentToTag(tag, docID)
+		err := wt.tryAddingDocumentToTag(tag, docID)
 		if err != nil {
 			lastError = err
 			continue
@@ -221,7 +235,7 @@ func (wt WaterTower) AddDocumentToTag(tag string, docID uint32) error {
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (wt WaterTower) addDocumentToTag(tag string, docID uint32) error {
+func (wt *WaterTower) tryAddingDocumentToTag(tag string, docID uint32) error {
 	existingTag := TagEntity{
 		ID: "t" + tag,
 	}
@@ -253,7 +267,7 @@ func (wt WaterTower) addDocumentToTag(tag string, docID uint32) error {
 	}
 }
 
-func (wt WaterTower) RemoveDocumentFromTag(tag string, docID uint32) error {
+func (wt *WaterTower) RemoveDocumentFromTag(tag string, docID uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
@@ -267,7 +281,7 @@ func (wt WaterTower) RemoveDocumentFromTag(tag string, docID uint32) error {
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (wt WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
+func (wt *WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 	existingTag := TagEntity{
 		ID: "t" + tag,
 	}
@@ -297,11 +311,11 @@ func (wt WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 	}
 }
 
-func (wt WaterTower) AddDocumentToToken(word string, docID uint32, positions []uint32) error {
+func (wt *WaterTower) addDocumentToToken(word string, docID uint32, positions []uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
-		err := wt.addDocumentToToken(word, docID, positions)
+		err := wt.addDocumentIDToToken(word, docID, positions)
 		if err != nil {
 			lastError = err
 			continue
@@ -311,7 +325,7 @@ func (wt WaterTower) AddDocumentToToken(word string, docID uint32, positions []u
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (wt WaterTower) addDocumentToToken(word string, docID uint32, positions []uint32) error {
+func (wt *WaterTower) addDocumentIDToToken(word string, docID uint32, positions []uint32) error {
 	existingToken := TokenEntity{
 		ID: "w" + word,
 	}
@@ -342,11 +356,11 @@ func (wt WaterTower) addDocumentToToken(word string, docID uint32, positions []u
 	}
 }
 
-func (wt WaterTower) RemoveDocumentFromToken(word string, docID uint32) error {
+func (wt *WaterTower) removeDocumentFromToken(word string, docID uint32) error {
 	retryCount := 50
 	var lastError error
 	for i := 0; i < retryCount; i++ {
-		err := wt.removeDocumentFromToken(word, docID)
+		err := wt.removeDocumentIDFromToken(word, docID)
 		if err != nil {
 			lastError = err
 			continue
@@ -356,7 +370,7 @@ func (wt WaterTower) RemoveDocumentFromToken(word string, docID uint32) error {
 	return fmt.Errorf("fail to update tag: %w", lastError)
 }
 
-func (wt WaterTower) removeDocumentFromToken(word string, docID uint32) error {
+func (wt *WaterTower) removeDocumentIDFromToken(word string, docID uint32) error {
 	existingToken := TokenEntity{
 		ID: "w" + word,
 	}
@@ -382,11 +396,11 @@ func (wt WaterTower) removeDocumentFromToken(word string, docID uint32) error {
 	}
 }
 
-func (wt WaterTower) FindTags(tagNames ...string) ([]*Tag, error) {
+func (wt *WaterTower) FindTags(tagNames ...string) ([]*Tag, error) {
 	return wt.FindTagsWithContext(wt.ctx, tagNames...)
 }
 
-func (wt WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]*Tag, error) {
+func (wt *WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]*Tag, error) {
 	if len(tagNames) == 0 {
 		return nil, nil
 	}
@@ -414,11 +428,11 @@ func (wt WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string
 	return result, nil
 }
 
-func (wt WaterTower) FindTokens(words ...string) ([]*Token, error) {
+func (wt *WaterTower) FindTokens(words ...string) ([]*Token, error) {
 	return wt.FindTokensWithContext(wt.ctx, words...)
 }
 
-func (wt WaterTower) FindTokensWithContext(ctx context.Context, words ...string) ([]*Token, error) {
+func (wt *WaterTower) FindTokensWithContext(ctx context.Context, words ...string) ([]*Token, error) {
 	if len(words) == 0 {
 		return nil, nil
 	}
@@ -461,7 +475,7 @@ func (wt WaterTower) FindTokensWithContext(ctx context.Context, words ...string)
 	return result, nil
 }
 
-func (wt WaterTower) FindDocuments(ids ...uint32) ([]*Document, error) {
+func (wt *WaterTower) FindDocuments(ids ...uint32) ([]*Document, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -480,12 +494,12 @@ func (wt WaterTower) FindDocuments(ids ...uint32) ([]*Document, error) {
 	return result, nil
 }
 
-func (wt WaterTower) FindDocumentByKey(uniqueKey string) (*Document, error) {
+func (wt *WaterTower) FindDocumentByKey(uniqueKey string) (*Document, error) {
 	_, _, doc, err := wt.findDocumentByKey(uniqueKey)
 	return doc, err
 }
 
-func (wt WaterTower) findDocumentByKey(uniqueKey string) (uint32, *DocumentKey, *Document, error) {
+func (wt *WaterTower) findDocumentByKey(uniqueKey string) (uint32, *DocumentKey, *Document, error) {
 	existingDocKey := DocumentKey{
 		ID: "k" + uniqueKey,
 	}

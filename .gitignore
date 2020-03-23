@@ -4,6 +4,8 @@
 *.dll
 *.so
 *.dylib
+.idea
+*.db
 cmd/httpstatus/httpstatus
 cmd/httpstatus/httpstatus.exe
 cmd/jsonschema/jsonschema
