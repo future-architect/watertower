@@ -5,15 +5,15 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/future-architect/watertower/nlp/english"
 	"github.com/rs/xid"
-	_ "github.com/shibukawa/watertower/nlp/english"
 	"github.com/stretchr/testify/assert"
 	_ "gocloud.dev/docstore/memdocstore"
 )
 
 func Test_PostDocument_IncrementID(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
@@ -33,7 +33,7 @@ func Test_PostDocument_IncrementID(t *testing.T) {
 
 func Test_PostDocument(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
@@ -141,7 +141,7 @@ func Test_grouping(t *testing.T) {
 
 func Test_AddDocumentToTag(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
@@ -168,7 +168,7 @@ func Test_AddDocumentToTag(t *testing.T) {
 
 func Test_RemoveDocumentFromTag(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
@@ -201,7 +201,7 @@ func Test_RemoveDocumentFromTag(t *testing.T) {
 
 func Test_AddDocumentToToken(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
@@ -233,7 +233,7 @@ func Test_AddDocumentToToken(t *testing.T) {
 
 func Test_RemoveDocumentFromToken(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)
@@ -267,7 +267,7 @@ func Test_RemoveDocumentFromToken(t *testing.T) {
 
 func TestFindTokens(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionPrefix: xid.New().String(),
+		CollectionSuffix: xid.New().String(),
 		DocumentUrl:      "mem://",
 	})
 	assert.Nil(t, err)

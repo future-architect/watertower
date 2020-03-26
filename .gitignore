@@ -6,10 +6,10 @@
 *.dylib
 .idea
 *.db
-cmd/httpstatus/httpstatus
-cmd/httpstatus/httpstatus.exe
-cmd/jsonschema/jsonschema
-cmd/jsonschema/jsonschema.exe
+samples/httpstatus/httpstatus
+samples/httpstatus/httpstatus.exe
+cmd/watertower-server/watertower-server
+cmd/watertower-server/watertower-server.exe
 
 # Test binary, build with `go test -c`
 *.test

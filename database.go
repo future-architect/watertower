@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/future-architect/watertower/nlp"
 	"github.com/shibukawa/compints"
-	"github.com/shibukawa/watertower/nlp"
 	"gocloud.dev/docstore"
 )
 
@@ -100,8 +100,8 @@ func (wt *WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, ti
 	}
 }
 
-// RemoveDocument removes document via uniqueKey
-func (wt *WaterTower) RemoveDocument(uniqueKey string) error {
+// RemoveDocumentByKey removes document via uniqueKey
+func (wt *WaterTower) RemoveDocumentByKey(uniqueKey string) error {
 	docID, existingDocKey, oldDoc, err := wt.findDocumentByKey(uniqueKey)
 	if err != nil {
 		return err
@@ -119,6 +119,34 @@ func (wt *WaterTower) RemoveDocument(uniqueKey string) error {
 		return err
 	}
 	tags, tokens, _, _, err := wt.analyzeDocument("removed", oldDoc)
+	if err != nil {
+		return err
+	}
+	return wt.updateTagsAndTokens(docID, tags, nil, tokens, nil)
+}
+
+// RemoveDocumentByID removes document via ID
+func (wt *WaterTower) RemoveDocumentByID(docID uint32) error {
+	docs, err := wt.FindDocuments(docID)
+	if err != nil {
+		return err
+	}
+	existingDocKey := DocumentKey{
+		ID: "k" + docs[0].UniqueKey,
+	}
+	err = wt.collection.Delete(wt.ctx, existingDocKey)
+	if err != nil {
+		return err
+	}
+	err = wt.collection.Delete(wt.ctx, docs[0])
+	if err != nil {
+		return err
+	}
+	err = wt.counter.Decrement(wt.ctx, documentCount)
+	if err != nil {
+		return err
+	}
+	tags, tokens, _, _, err := wt.analyzeDocument("removed", docs[0])
 	if err != nil {
 		return err
 	}

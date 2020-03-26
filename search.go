@@ -2,7 +2,7 @@ package watertower
 
 import (
 	"fmt"
-	"github.com/shibukawa/watertower/nlp"
+	"github.com/future-architect/watertower/nlp"
 	"golang.org/x/sync/errgroup"
 	"math"
 	"sort"

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/future-architect/gocloudurls"
 	"github.com/shibukawa/cloudcounter"
-	"github.com/shibukawa/gocloudurls"
 	"gocloud.dev/docstore"
 	_ "gocloud.dev/pubsub/mempubsub"
 )
@@ -23,10 +23,9 @@ type WaterTower struct {
 
 type Option struct {
 	DocumentUrl        string
-	CollectionOpener   func(ctx context.Context, documentURL, collectionPrefix, localFolder string) (*docstore.Collection, error)
+	CollectionOpener   func(ctx context.Context, opt Option) (*docstore.Collection, error)
 	LocalFolder        string
-	CollectionPrefix   string
-	CustomFanOut       string
+	CollectionSuffix   string
 	CounterConcurrency int
 	TitleScoreRatio    float64
 }
@@ -36,16 +35,8 @@ const (
 	documentCount                         = "document_count"
 )
 
-func DefaultCollectionOpener(ctx context.Context, documentURL, collectionPrefix, localFolder string) (*docstore.Collection, error) {
-	var filename string
-	if localFolder != "" {
-		filename = filepath.Join(localFolder, "watertower.db")
-	}
-	url, err := gocloudurls.NormalizeDocStoreURL(documentURL, gocloudurls.Option{
-		Collection: collectionPrefix + "watertower",
-		KeyName:    "id",
-		FileName:   filename,
-	})
+func DefaultCollectionOpener(ctx context.Context, opt Option) (*docstore.Collection, error) {
+	url, err := defaultCollectionURL(opt)
 	if err != nil {
 		return nil, fmt.Errorf("Can't parse document URL: %w", err)
 	}
@@ -56,7 +47,32 @@ func DefaultCollectionOpener(ctx context.Context, documentURL, collectionPrefix,
 	return collection, nil
 }
 
-func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
+// DefaultCollectionURL returns collection URL. This function is for help message or debugging
+func DefaultCollectionURL(opt ...Option) (string, error) {
+	option, err := initOpt(opt...)
+	if err != nil {
+		return "", err
+	}
+	if option.CollectionOpener == nil {
+		return defaultCollectionURL(option)
+	}
+	return "", errors.New("Can't generate collection URL for custom opener")
+}
+
+func defaultCollectionURL(opt Option) (string, error) {
+	var filename string
+	if opt.LocalFolder != "" {
+		filename = filepath.Join(opt.LocalFolder, "watertower.db")
+	}
+	url, err := gocloudurls.NormalizeDocStoreURL(opt.DocumentUrl, gocloudurls.Option{
+		Collection: "watertower" + opt.CollectionSuffix,
+		KeyName:    "id",
+		FileName:   filename,
+	})
+	return url, err
+}
+
+func initOpt(opt ...Option) (Option, error) {
 	var option Option
 	if len(opt) > 0 {
 		option = opt[0]
@@ -65,10 +81,7 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 		option.DocumentUrl = os.Getenv("WATERTOWER_DOCUMENT_URL")
 	}
 	if option.DocumentUrl == "" {
-		return nil, errors.New("NewInvertedIndex: DocumentUrl is missign")
-	}
-	if option.CollectionOpener == nil {
-		option.CollectionOpener = DefaultCollectionOpener
+		return option, errors.New("NewInvertedIndex: DocumentUrl is missign")
 	}
 	if option.TitleScoreRatio == 0.0 {
 		option.TitleScoreRatio = 5.0
@@ -76,17 +89,29 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	if option.CounterConcurrency == 0 {
 		option.CounterConcurrency = 5
 	}
+	return option, nil
+}
+
+// NewWaterTower initialize WaterTower instance
+func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
+	option, err := initOpt(opt...)
+	if err != nil {
+		return nil, err
+	}
+	if option.CollectionOpener == nil {
+		option.CollectionOpener = DefaultCollectionOpener
+	}
 	result := &WaterTower{
 		ctx: ctx,
 	}
-	collection, err := option.CollectionOpener(ctx, option.DocumentUrl, option.CollectionPrefix, option.LocalFolder)
+	collection, err := option.CollectionOpener(ctx, option)
 	if err != nil {
 		return nil, err
 	}
 	result.collection = collection
 	result.counter = cloudcounter.NewCounter(collection, cloudcounter.Option{
 		Concurrency: option.CounterConcurrency,
-		Prefix:      option.CollectionPrefix + "c",
+		Prefix:      option.CollectionSuffix + "c",
 	})
 	err = result.counter.Register(ctx, documentID)
 	if err != nil {
@@ -103,6 +128,7 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	return result, nil
 }
 
+// Close closes document store connection. Some docstore (at least memdocstore) needs Close() to store file
 func (wt *WaterTower) Close() (err error) {
 	wt.close.Do(func() {
 		err = wt.collection.Close()

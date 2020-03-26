@@ -1,6 +1,10 @@
 package watertower
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
 
 type Document struct {
 	ID             string            `json:"-" docstore:"id"`
@@ -17,6 +21,15 @@ type Document struct {
 
 	Schema  string `json:"$schema,omitempty" docstore:"-"`
 	Comment string `json:"$comment,omitempty" docstore:"-"`
+}
+
+func (d Document) DocumentID() (uint32, error) {
+	str := d.ID[1:]
+	docID, err := strconv.ParseUint(str, 16, 32)
+	if err != nil {
+		return 0, fmt.Errorf("Can't parse documentID: %s", d.ID)
+	}
+	return uint32(docID), nil
 }
 
 type DocumentKey struct {

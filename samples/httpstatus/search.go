@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/shibukawa/watertower"
+	"github.com/future-architect/watertower"
 	"go.pyspa.org/brbundle"
 )
 

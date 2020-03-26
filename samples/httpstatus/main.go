@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	_ "github.com/shibukawa/watertower/nlp/english"
-	_ "github.com/shibukawa/watertower/nlp/japanese"
+	_ "github.com/future-architect/watertower/nlp/english"
+	_ "github.com/future-architect/watertower/nlp/japanese"
 	_ "gocloud.dev/docstore/memdocstore"
 	"gopkg.in/alecthomas/kingpin.v2"
 )

@@ -1,0 +1,447 @@
+swagger: '2.0'
+info:
+  title: watertower
+  version: '1.0'
+host: 'localhost:3000'
+schemes:
+  - http
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+  '/{index}/_doc/{_id}':
+    parameters:
+      - type: string
+        name: index
+        in: path
+        required: true
+        description: Name of the index that contains the document.
+      - type: string
+        name: _id
+        in: path
+        required: true
+        description: Unique identifier of the document.
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              _index:
+                type: string
+              _type:
+                type: string
+              _id:
+                type: string
+              _version:
+                type: integer
+              _seq_no:
+                type: integer
+              _primary_term:
+                type: integer
+              found:
+                type: boolean
+              _source:
+                $ref: '#/definitions/Document'
+          examples:
+            get response:
+              _index: twitter
+              _type: _doc
+              _id: '0'
+              _version: 1
+              _seq_no: 10
+              _primary_term: 1
+              found: true
+              _source:
+                user: kimchy
+                date: '2009-11-15T14:12:12'
+                likes: 0
+                message: trying out Elasticsearch
+        '400':
+          description: Bad Request
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '404':
+          description: Not Found
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              _source:
+                type: 'null'
+              found:
+                type: boolean
+              _primary_term:
+                type: integer
+              _seq_no:
+                type: integer
+              _version:
+                type: integer
+              _id:
+                type: string
+              _type:
+                type: string
+              _index:
+                type: string
+      operationId: get-index-_doc-_id
+      description: You use GET to retrieve a document and its source or stored fields from a particular index.
+      parameters: []
+    put:
+      summary: ''
+      operationId: put-index-_doc-_id
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ModifyResponse'
+        '400':
+          description: Bad Request
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '404':
+          description: Not Found
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+      description: Update an existing JSON document to the specified index and makes it searchable.
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/Document'
+          x-examples:
+            sample document:
+              lang: en
+              title: 101 Switching Protocol
+              content: 'This code is sent in response to an Upgrade request header from the client, and indicates the protocol the server is switching to.'
+              tags:
+                - '101'
+    delete:
+      summary: ''
+      operationId: delete-index-_doc-_id
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ModifyResponse'
+        '400':
+          description: Bad Request
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '404':
+          description: Not Found
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+      description: You use DELETE to remove a document from an index. You must specify the index name and document ID.
+  '/{index}/_doc/':
+    parameters:
+      - type: string
+        name: index
+        in: path
+        required: true
+        description: Name of the target index.
+    post:
+      summary: ''
+      operationId: post-index-_doc
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ModifyResponse'
+        '404':
+          description: Not Found
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '500':
+          description: Internal Server Error
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+      description: Adds a JSON document to the specified index and makes it searchable.
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/Document'
+  '/{index}/_source/{_id}':
+    parameters:
+      - type: string
+        name: index
+        in: path
+        required: true
+        description: Name of the index that contains the document.
+      - type: string
+        name: _id
+        in: path
+        required: true
+        description: Unique identifier of the document.
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Document'
+        '400':
+          description: Bad Request
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '404':
+          description: Not Found
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+      operationId: get-index-_source-_id
+      description: You use GET to retrieve just the document from a particular index.
+  '/{index}/_search':
+    parameters:
+      - type: string
+        name: index
+        in: path
+        required: true
+        description: Name of the index that contains the document.
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              took:
+                type: integer
+              timed_out:
+                type: boolean
+              _shards:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  successful:
+                    type: integer
+                  skipped:
+                    type: integer
+                  failed:
+                    type: integer
+              hits:
+                type: object
+                properties:
+                  total:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      relation:
+                        type: string
+                  max_score:
+                    type:
+                      - 'null'
+                      - number
+                  hits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _index:
+                          type: string
+                        _type:
+                          type: string
+                        _id:
+                          type: string
+                        sort:
+                          type: array
+                          items:
+                            type: integer
+                        _source:
+                          $ref: '#/definitions/Document'
+                        _score:
+                          type:
+                            - 'null'
+                            - number
+        '400':
+          description: Bad Request
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '404':
+          description: Not Found
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+        '500':
+          description: Internal Server Error
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+      operationId: get-index-_search
+      parameters:
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              query:
+                type: object
+                required:
+                  - bool
+                properties:
+                  bool:
+                    type: object
+                    properties:
+                      must:
+                        type: object
+                        required:
+                          - match_phrase
+                        properties:
+                          match_phrase:
+                            type: object
+                            required:
+                              - content
+                            properties:
+                              content:
+                                type: object
+                                required:
+                                  - query
+                                properties:
+                                  query:
+                                    type: string
+                                  analyzer:
+                                    type: string
+                      filter:
+                        type: object
+                        properties:
+                          terms:
+                            type: object
+                            required:
+                              - tags
+                            properties:
+                              tags:
+                                type: array
+                                items:
+                                  type: string
+                        required:
+                          - terms
+            required:
+              - query
+          x-examples:
+            tag query:
+              query:
+                terms:
+                  tags:
+                    - white
+                    - red
+            full text search:
+              query:
+                match:
+                  content:
+                    query: this is a test
+            full text and tags:
+              query:
+                match:
+                  content:
+                    query: this is a test
+                terms:
+                  tags:
+                    - white
+                    - red
+          description: ''
+        - type: string
+          in: query
+          name: q
+          description: Search by unique_key
+definitions:
+  ModifyResponse:
+    title: ModifyResponse
+    type: object
+    properties:
+      result:
+        type: string
+      _primary_term:
+        type: integer
+      _seq_no:
+        type: integer
+      _version:
+        type: integer
+      _id:
+        type: string
+      _type:
+        type: string
+      _index:
+        type: string
+      _shards:
+        type: object
+        properties:
+          total:
+            type: integer
+          failed:
+            type: integer
+          successful:
+            type: integer
+    x-examples:
+      delete sample:
+        _shards:
+          total: 2
+          failed: 0
+          successful: 2
+        _index: twitter
+        _type: _doc
+        _id: '1'
+        _version: 2
+        _primary_term: 1
+        _seq_no: 5
+        result: deleted
+  Document:
+    title: Document
+    type: object
+    properties:
+      tags:
+        type: array
+        items:
+          type: string
+      content:
+        type: string
+      title:
+        type: string
+      lang:
+        type: string
+      unique_key:
+        type: string
+      metadata:
+        type: object

@@ -25,13 +25,14 @@ Now only English and Japanese are implemented.
   "unique_key": "100",
   "lang": "en",
   "title": "100 Continue",
+  "tags": ["100", "no-error"],
   "content": "This interim response indicates that everything so far is OK and that the client should continue the request, or ignore the response if the request is already finished."
 }
 ```
 
 ## Basic usage
 
-### Raw APIs
+### Raw Go APIs
 
 ### HTTP handler
 

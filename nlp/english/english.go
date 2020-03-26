@@ -3,7 +3,7 @@ package english
 import (
 	"strings"
 
-	"github.com/shibukawa/watertower/nlp"
+	"github.com/future-architect/watertower/nlp"
 	"github.com/kljensen/snowball/english"
 )
 

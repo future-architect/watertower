@@ -12,8 +12,8 @@ const (
 var languages = make(map[string]*Tokenizer)
 
 type Token struct {
-	Word       string
-	Positions  []uint32
+	Word      string
+	Positions []uint32
 }
 
 func FindTokenizer(lang string) (*Tokenizer, error) {
@@ -59,9 +59,9 @@ func (t Tokenizer) Tokenize(content string) []*Token {
 	result := make([]*Token, index)
 	for stemWord, positions := range wordToPositions {
 		for _, pos := range positions {
-			result[pos] =  &Token{
-				Word:       stemWord,
-				Positions:  positions,
+			result[pos] = &Token{
+				Word:      stemWord,
+				Positions: positions,
 			}
 		}
 	}
