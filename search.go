@@ -8,6 +8,11 @@ import (
 	"sort"
 )
 
+// Search searches documents.
+//
+// searchWord is for title, content. This is processed by NLP logic specified by lang parameter.
+//
+// tags is for filter search result.
 func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
 	tokenizer, err := nlp.FindTokenizer(lang)
 	if err != nil {
@@ -36,7 +41,7 @@ func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*
 		})
 	}
 
-	var foundTokens []*Token
+	var foundTokens []*token
 	var tokenDocIDGroups [][]uint32
 	var docCount int
 
@@ -96,7 +101,7 @@ func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*
 	return docs, nil
 }
 
-func phraseSearchFilter(docIDs []uint32, searchTokens map[string]*nlp.Token, foundTokens []*Token) (matchedDocIDs []uint32, foundPositions [][]uint32) {
+func phraseSearchFilter(docIDs []uint32, searchTokens map[string]*nlp.Token, foundTokens []*token) (matchedDocIDs []uint32, foundPositions [][]uint32) {
 	for _, docID := range docIDs {
 		tokenPositionMap := convertToTokenPositionMap(foundTokens, docID)
 		var relativePositionGroups [][]uint32
@@ -135,7 +140,7 @@ func findPhraseMatchPositions(token *nlp.Token, positionMap map[uint32]bool) []u
 	return result
 }
 
-func convertToTokenPositionMap(foundTokens []*Token, docID uint32) map[string]map[uint32]bool {
+func convertToTokenPositionMap(foundTokens []*token, docID uint32) map[string]map[uint32]bool {
 	foundTokenMaps := make(map[string]map[uint32]bool)
 	for _, foundToken := range foundTokens {
 		positionMap := make(map[uint32]bool)
@@ -152,7 +157,7 @@ func convertToTokenPositionMap(foundTokens []*Token, docID uint32) map[string]ma
 	return foundTokenMaps
 }
 
-func calcScore(foundTokens []*Token, docCount int, documentID uint32) float64 {
+func calcScore(foundTokens []*token, docCount int, documentID uint32) float64 {
 	var totalScore float64
 	for _, token := range foundTokens {
 		for _, posting := range token.Postings {

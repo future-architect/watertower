@@ -13,8 +13,8 @@ import (
 
 func Test_PostDocument_IncrementID(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -33,8 +33,8 @@ func Test_PostDocument_IncrementID(t *testing.T) {
 
 func Test_PostDocument(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -141,8 +141,8 @@ func Test_grouping(t *testing.T) {
 
 func Test_AddDocumentToTag(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -168,8 +168,8 @@ func Test_AddDocumentToTag(t *testing.T) {
 
 func Test_RemoveDocumentFromTag(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -201,8 +201,8 @@ func Test_RemoveDocumentFromTag(t *testing.T) {
 
 func Test_AddDocumentToToken(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -233,8 +233,8 @@ func Test_AddDocumentToToken(t *testing.T) {
 
 func Test_RemoveDocumentFromToken(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -267,8 +267,8 @@ func Test_RemoveDocumentFromToken(t *testing.T) {
 
 func TestFindTokens(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {

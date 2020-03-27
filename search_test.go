@@ -13,8 +13,8 @@ import (
 
 func TestSearchEN(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -142,8 +142,8 @@ It is intended for cases where another process or server handles the request, or
 
 func TestSearchJP(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -172,8 +172,8 @@ func TestSearchJP(t *testing.T) {
 
 func TestSearch_ByPhrase(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		CollectionSuffix: xid.New().String(),
-		DocumentUrl:      "mem://",
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
 	})
 	assert.Nil(t, err)
 	defer func() {
@@ -268,11 +268,11 @@ func Test_findRelativePositions(t *testing.T) {
 }
 
 func TestCalcScore(t *testing.T) {
-	foundTokens := []*Token{
+	foundTokens := []*token{
 		{
 			Word:  "first",
 			Found: false,
-			Postings: []Posting{
+			Postings: []posting{
 				{
 					DocumentID: 3,
 					Positions:  []uint32{1, 2, 3},

@@ -61,8 +61,8 @@ func configureAPI(api *operations.WatertowerAPI) http.Handler {
 	if watertowerOptions.DryRun {
 		for _, index := range indexes {
 			url, err := watertower.DefaultCollectionURL(watertower.Option{
-				DocumentUrl:      watertowerOptions.DocumentUrl,
-				CollectionSuffix: index,
+				DocumentUrl: watertowerOptions.DocumentUrl,
+				Index:       index,
 			})
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error for index '%s': %v\n", index, err)
@@ -77,15 +77,15 @@ func configureAPI(api *operations.WatertowerAPI) http.Handler {
 	hasError := false
 	for _, index := range indexes {
 		url, err := watertower.DefaultCollectionURL(watertower.Option{
-			DocumentUrl:      watertowerOptions.DocumentUrl,
-			CollectionSuffix: index,
+			DocumentUrl: watertowerOptions.DocumentUrl,
+			Index:       index,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error for index '%s': %v\n", index, err)
 		}
 		wt, err := watertower.NewWaterTower(ctx, watertower.Option{
-			DocumentUrl:      watertowerOptions.DocumentUrl,
-			CollectionSuffix: index,
+			DocumentUrl: watertowerOptions.DocumentUrl,
+			Index:       index,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error at initializing index '%s' at %s: err\n", index, url, err)

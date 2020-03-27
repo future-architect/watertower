@@ -32,52 +32,47 @@ func (d Document) DocumentID() (uint32, error) {
 	return uint32(docID), nil
 }
 
-type DocumentKey struct {
+type documentKey struct {
 	ID         string `json:"-" docstore:"id"`
 	UniqueKey  string `json:"unique_key" docstore:"unique_key"`
 	DocumentID uint32 `json:"docid" docstore:"docid"`
 }
 
-type Token struct {
+type token struct {
 	Word     string
 	Found    bool
-	Postings []Posting
+	Postings []posting
 }
 
-func (t Token) toPostingMap() map[uint32]Posting {
-	result := make(map[uint32]Posting)
+func (t token) toPostingMap() map[uint32]posting {
+	result := make(map[uint32]posting)
 	for _, posting := range t.Postings {
 		result[posting.DocumentID] = posting
 	}
 	return result
 }
 
-type TokenEntity struct {
+type tokenEntity struct {
 	ID       string          `docstore:"id"`
-	Postings []PostingEntity `docstore:"postings"`
+	Postings []postingEntity `docstore:"postings"`
 }
 
-type Posting struct {
+type posting struct {
 	DocumentID uint32   `json:"document_id"`
 	Positions  []uint32 `json:"positions"`
 }
 
-type PostingEntity struct {
+type postingEntity struct {
 	DocumentID uint32 `docstore:"document_id"`
 	Positions  []byte `docstore:"positions"`
 }
 
-type Tag struct {
+type tag struct {
 	ID          string   `docstore:"id"`
 	DocumentIDs []uint32 `docstore:"documentIDs"`
 }
 
-type TagEntity struct {
+type tagEntity struct {
 	ID          string `docstore:"id"`
 	DocumentIDs []byte `docstore:"documentIDs"`
-}
-
-type CounterEntity struct {
-	ID      string `docstore:"id"`
-	Counter int    `docstore:"counter"`
 }

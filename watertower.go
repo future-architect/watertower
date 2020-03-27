@@ -25,7 +25,7 @@ type Option struct {
 	DocumentUrl        string
 	CollectionOpener   func(ctx context.Context, opt Option) (*docstore.Collection, error)
 	LocalFolder        string
-	CollectionSuffix   string
+	Index              string
 	CounterConcurrency int
 	TitleScoreRatio    float64
 }
@@ -64,8 +64,11 @@ func defaultCollectionURL(opt Option) (string, error) {
 	if opt.LocalFolder != "" {
 		filename = filepath.Join(opt.LocalFolder, "watertower.db")
 	}
+	if opt.Index == "" {
+		opt.Index = "index"
+	}
 	url, err := gocloudurls.NormalizeDocStoreURL(opt.DocumentUrl, gocloudurls.Option{
-		Collection: "watertower" + opt.CollectionSuffix,
+		Collection: opt.Index,
 		KeyName:    "id",
 		FileName:   filename,
 	})
@@ -111,7 +114,7 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	result.collection = collection
 	result.counter = cloudcounter.NewCounter(collection, cloudcounter.Option{
 		Concurrency: option.CounterConcurrency,
-		Prefix:      option.CollectionSuffix + "c",
+		Prefix:      option.Index + "c",
 	})
 	err = result.counter.Register(ctx, documentID)
 	if err != nil {
