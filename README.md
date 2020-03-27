@@ -1,5 +1,7 @@
 # watertower
 
+[![GoDoc](https://godoc.org/github.com/future-architect/watertower?status.svg)](https://godoc.org/github.com/future-architect/watertower)
+
 ![watertower](website/watertower.jpg)`
 
 [© Copyright Steve Daniels and licensed under CC BY-SA 2.0](https://www.geograph.org.uk/photo/3103724)
