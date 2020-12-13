@@ -14,7 +14,8 @@ require (
 	github.com/go-openapi/validate v0.19.7
 	github.com/golang/protobuf v1.3.5 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
-	github.com/ikawaha/kagome.ipadic v1.1.0
+	github.com/ikawaha/kagome-dict/ipa v1.0.1
+	github.com/ikawaha/kagome/v2 v2.3.4
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/kljensen/snowball v0.6.0
 	github.com/kr/pretty v0.2.0 // indirect
