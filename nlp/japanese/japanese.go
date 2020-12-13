@@ -1,13 +1,15 @@
 package japanese
 
 import (
-	"sync"
-
 	"github.com/future-architect/watertower/nlp"
-	"github.com/ikawaha/kagome.ipadic/tokenizer"
+	"github.com/ikawaha/kagome-dict/ipa"
+	"github.com/ikawaha/kagome/v2/filter"
+	"github.com/ikawaha/kagome/v2/tokenizer"
 )
 
 const Language = "ja"
+
+var posFilter *filter.POSFilter
 
 func init() {
 	// https://github.com/stopwords-iso/stopwords-ja
@@ -26,30 +28,19 @@ func init() {
 	for _, stopWord := range stopWordsSrc {
 		stopWords[stopWord] = true
 	}
+	posFilter = filter.NewPOSFilter(filter.POS{"助詞"}, filter.POS{"記号"})
 	nlp.RegisterTokenizer(Language, japaneseSplitter, japaneseStemmer, stopWords)
 }
 
-var once sync.Once
-var kagomeTokenizer tokenizer.Tokenizer
-
 func japaneseSplitter(content string) []string {
-	once.Do(func() {
-		var dic = tokenizer.SysDicIPASimple()
-		//fmt.Println(dic)
-		kagomeTokenizer = tokenizer.NewWithDic(dic)
-	})
+	t, err := tokenizer.New(ipa.DictShrink(), tokenizer.OmitBosEos())
+	if err != nil {
+		panic(err)
+	}
+	tokens := t.Analyze(content, tokenizer.Search)
+	posFilter.Drop(&tokens)
 	var result []string
-	tokens := kagomeTokenizer.Analyze(content, tokenizer.Search)
 	for _, token := range tokens {
-		if token.Class == tokenizer.DUMMY {
-			continue
-		}
-		features := token.Features()
-		//fmt.Printf("%s\t%v\n", token.Surface, features)
-		if features[0] == "助詞" || features[0] == "記号" {
-			continue
-		}
-		// use normalized word?
 		result = append(result, token.Surface)
 	}
 	return result
