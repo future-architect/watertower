@@ -14,11 +14,21 @@ import (
 //
 // tags is for filter search result.
 func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*Document, error) {
+	if lang == "" {
+		lang = wt.defaultLanguage
+	}
+	if lang == "" {
+		if len(searchWord) < 2 {
+			lang = "unigram"
+		} else {
+			lang = "bigram"
+		}
+	}
 	tokenizer, err := nlp.FindTokenizer(lang)
 	if err != nil {
 		return nil, fmt.Errorf("tokenizer for language '%s' is not found: %w", lang, err)
 	}
-	searchTokens, _ := tokenizer.TokenizeToMap(searchWord)
+	searchTokens, _ := tokenizer.TokenizeToMap(searchWord, 0)
 
 	if len(searchTokens) == 0 && len(tags) == 0 {
 		return nil, nil

@@ -15,10 +15,11 @@ import (
 )
 
 type WaterTower struct {
-	ctx        context.Context
-	collection *docstore.Collection
-	counter    *cloudcounter.Counter
-	close      sync.Once
+	ctx             context.Context
+	collection      *docstore.Collection
+	counter         *cloudcounter.Counter
+	close           sync.Once
+	defaultLanguage string
 }
 
 type Option struct {
@@ -28,6 +29,7 @@ type Option struct {
 	Index              string
 	CounterConcurrency int
 	TitleScoreRatio    float64
+	DefaultLanguage    string
 }
 
 const (
@@ -106,6 +108,7 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	}
 	result := &WaterTower{
 		ctx: ctx,
+		defaultLanguage: option.DefaultLanguage,
 	}
 	collection, err := option.CollectionOpener(ctx, option)
 	if err != nil {

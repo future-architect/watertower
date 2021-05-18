@@ -8,6 +8,8 @@ import (
 	"strconv"
 
 	"github.com/future-architect/watertower/nlp"
+	_ "github.com/future-architect/watertower/nlp/bigram"
+	_ "github.com/future-architect/watertower/nlp/unigram"
 	"github.com/shibukawa/compints"
 	"gocloud.dev/docstore"
 )
@@ -37,7 +39,7 @@ func (wt *WaterTower) PostDocument(uniqueKey string, document *Document) (uint32
 		return 0, fmt.Errorf("fail to register document's unique key: %w", lastError)
 	}
 	for i := 0; i < retryCount; i++ {
-		oldDoc, err := wt.postDocument(docID, uniqueKey, wordCount, titleWordCount, document)
+		oldDoc, err := wt.postDocumentBody(docID, uniqueKey, wordCount, titleWordCount, document)
 		if err != nil {
 			lastError = err
 			continue
@@ -79,7 +81,7 @@ func (wt *WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
 	return uint32(newID), nil
 }
 
-func (wt *WaterTower) postDocument(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
+func (wt *WaterTower) postDocumentBody(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
 	idStr := "d" + strconv.FormatUint(uint64(docID), 16)
 	existingDocument := Document{
 		ID: idStr,
@@ -157,13 +159,49 @@ func (wt *WaterTower) analyzeDocument(label string, document *Document) (tags []
 	if document == nil {
 		return nil, make(map[string]*nlp.Token), 0, 0, nil
 	}
-	tokenizer, err := nlp.FindTokenizer(document.Language)
+	language := document.Language
+	if language == "" {
+		language = wt.defaultLanguage
+	}
+	if language == "" {
+		tags, tokens, wordCount, titleWordCount, err := wt.analyzeDocumentWithLanguage(label, document, "bigram", 0)
+		if err != nil {
+			return nil, nil, 0, 0, err
+		}
+		_, tokens2, wordCount2, titleWordCount2, err := wt.analyzeDocumentWithLanguage(label, document, "unigram", wordCount)
+		if err != nil {
+			return nil, nil, 0, 0, err
+		}
+		// merge uni-gram index and bi-gram index
+		for key, token := range tokens2 {
+			for i, pos := range token.Positions {
+				token.Positions[i] = pos + uint32(wordCount)
+			}
+			tokens[key] = token
+		}
+		if wordCount == 0 {
+			wordCount = wordCount2
+		}
+		if titleWordCount == 0 {
+			titleWordCount = titleWordCount2
+		}
+		return tags, tokens, wordCount, titleWordCount, nil
+	} else {
+		return wt.analyzeDocumentWithLanguage(label, document, language, 0)
+	}
+}
+
+func (wt *WaterTower) analyzeDocumentWithLanguage(label string, document *Document, language string, offset int) (tags []string, tokens map[string]*nlp.Token, wordCount, titleWordCount int, err error) {
+	tokenizer, err := nlp.FindTokenizer(language)
 	if err != nil {
 		return nil, nil, 0, 0, fmt.Errorf("Cannot find tokenizer for %s document: lang=%s, err=%w", label, document.Language, err)
 	}
-	tokens, wordCount = tokenizer.TokenizeToMap(document.Title + "\n" + document.Content)
-	titleWordCount = len(tokenizer.Tokenize(document.Title))
-	return document.Tags, tokens, wordCount, titleWordCount, nil
+	tokens, titleWordCount = tokenizer.TokenizeToMap(document.Title, offset)
+	bodyTokens, wordCount := tokenizer.TokenizeToMap(document.Content, offset + titleWordCount + 1)
+	for k, v := range bodyTokens {
+		tokens[k] = v
+	}
+	return document.Tags, tokens, wordCount + titleWordCount, titleWordCount, nil
 }
 
 func (wt *WaterTower) updateTagsAndTokens(docID uint32, oldTags, newTags []string, oldDocTokens, newDocTokens map[string]*nlp.Token) error {

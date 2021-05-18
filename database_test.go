@@ -52,7 +52,8 @@ func Test_PostDocument(t *testing.T) {
 	docID, err := wt.postDocumentKey("test")
 	assert.Nil(t, err)
 	_, _, wordCount, titleWordCount, err := wt.analyzeDocument("new", doc)
-	oldDoc, err := wt.postDocument(docID, "test", wordCount, titleWordCount, doc)
+	assert.Nil(t, err)
+	oldDoc, err := wt.postDocumentBody(docID, "test", wordCount, titleWordCount, doc)
 	assert.Nil(t, err)
 	assert.Nil(t, oldDoc)
 
@@ -63,13 +64,181 @@ func Test_PostDocument(t *testing.T) {
 	assert.Equal(t, titleWordCount, loadedDocs[0].TitleWordCount)
 
 	doc.Title = "new title"
-	oldDoc, err = wt.postDocument(docID, "test", doc.WordCount, doc.TitleWordCount, doc)
+	oldDoc, err = wt.postDocumentBody(docID, "test", doc.WordCount, doc.TitleWordCount, doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "old title", oldDoc.Title)
 
 	loadedDoc, err := wt.FindDocumentByKey("test")
 	assert.Nil(t, err)
 	assert.Equal(t, "new title", loadedDoc.Title)
+}
+
+func Test_analyzeDocumentWithNgram(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
+	})
+	assert.Nil(t, err)
+	defer func() {
+		err := wt.Close()
+		assert.Nil(t, err)
+	}()
+
+	type args struct {
+		content string
+	}
+
+	tests := []struct {
+		name string
+		args args
+		wantTokens int
+		wantWordCount int
+	}{
+		{
+			name: "uni-gram: single word",
+			args: args{
+				content: "G",
+			},
+			wantTokens: 1,
+			wantWordCount: 1,
+		},
+		{
+			name: "bi-gram + uni-gram: single word",
+			args: args{
+				content: "Go",
+			},
+			wantTokens: 1 + 2,
+			wantWordCount: 1,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			doc := &Document{
+				Language:  "", // fallback to n-gram
+				Title:     "",
+				UpdatedAt: time.Time{},
+				Tags:      []string{},
+				Content:   tc.args.content,
+			}
+			_, tokens, wordCount, _, err := wt.analyzeDocument("test", doc)
+			assert.Nil(t, err)
+			assert.Equal(t, tc.wantTokens, len(tokens))
+			for k, v := range tokens {
+				t.Log(k, *v)
+			}
+			assert.Equal(t, tc.wantWordCount, wordCount)
+			t.Log(wordCount)
+		})
+	}
+}
+
+func Test_PostDocumentWithNgram(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
+	})
+	assert.Nil(t, err)
+	defer func() {
+		err := wt.Close()
+		assert.Nil(t, err)
+	}()
+
+	src := &Document{
+		Language:  "", // if language is empty, watertower uses n-gram tokenizer when default language is unavailable
+		Title:     "old title",
+		UpdatedAt: time.Time{},
+		Tags:      []string{"go", "website", "introduction"},
+		Content:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
+	}
+	_, err = wt.PostDocument("test", src)
+	assert.Nil(t, err)
+
+	type args struct {
+		searchWord string
+	}
+
+	tests := []struct {
+		name string
+		args args
+		found bool
+	}{
+		{
+			name: "bi-gram match: single word",
+			args: args{
+				searchWord: "Go",
+			},
+			found: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			results, err := wt.Search(tc.args.searchWord, nil, "")
+			assert.Nil(t, err)
+			if tc.found {
+				assert.Equal(t, 1, len(results))
+				if len(results) > 0 {
+					assert.Equal(t, src.Title, results[0].Title)
+				}
+			} else {
+				assert.Equal(t, 0, len(results))
+			}
+		})
+	}
+}
+
+func Test_PostDocumentWithDefaultLanguage(t *testing.T) {
+	wt, err := NewWaterTower(context.Background(), Option{
+		Index:       xid.New().String(),
+		DocumentUrl: "mem://",
+		DefaultLanguage: "en",
+	})
+	assert.Nil(t, err)
+	defer func() {
+		err := wt.Close()
+		assert.Nil(t, err)
+	}()
+
+	src := &Document{
+		Language:  "", // if language is empty, watertower uses default language tokenizer
+		Title:     "old title",
+		UpdatedAt: time.Time{},
+		Tags:      []string{"go", "website", "introduction"},
+		Content:   "Go is an open source programming language that makes it easy to build simple, reliable, and efficient software.",
+	}
+	_, err = wt.PostDocument("test", src)
+	assert.Nil(t, err)
+
+	type args struct {
+		searchWord string
+	}
+
+	tests := []struct {
+		name string
+		args args
+		found bool
+	}{
+		{
+			name: "english match: single word",
+			args: args{
+				searchWord: "programming",
+			},
+			found: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			results, err := wt.Search(tc.args.searchWord, nil, "en")
+			assert.Nil(t, err)
+			if tc.found {
+				assert.Equal(t, 1, len(results))
+				if len(results) > 0 {
+					assert.Equal(t, src.Title, results[0].Title)
+				}
+			} else {
+				assert.Equal(t, 0, len(results))
+			}
+		})
+	}
 }
 
 func Test_grouping(t *testing.T) {

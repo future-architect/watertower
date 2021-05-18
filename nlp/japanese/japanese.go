@@ -29,7 +29,7 @@ func init() {
 		stopWords[stopWord] = true
 	}
 	posFilter = filter.NewPOSFilter(filter.POS{"助詞"}, filter.POS{"記号"})
-	nlp.RegisterTokenizer(Language, japaneseSplitter, japaneseStemmer, stopWords)
+	nlp.RegisterTokenizer(Language, japaneseSplitter, nil, stopWords)
 }
 
 func japaneseSplitter(content string) []string {
@@ -44,8 +44,4 @@ func japaneseSplitter(content string) []string {
 		result = append(result, token.Surface)
 	}
 	return result
-}
-
-func japaneseStemmer(content string) string {
-	return content
 }

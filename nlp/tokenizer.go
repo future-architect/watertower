@@ -44,7 +44,11 @@ func (t Tokenizer) StemWord(word string) string {
 	return t.stemmer(word)
 }
 
-func (t Tokenizer) Tokenize(content string) []*Token {
+func (t Tokenizer) Tokenize(content string, offset int) []*Token {
+	// offset is for document section.
+	// inside inverse index, title words and body words are located sequentially.
+	// Analyse them independently but they are in same token list.
+	// Offset shifts body token index and not to overwrite position index of title
 	words := t.splitter(content)
 	wordToPositions := make(map[string][]uint32)
 	var index uint32
@@ -52,7 +56,10 @@ func (t Tokenizer) Tokenize(content string) []*Token {
 		if t.stopWords[word] {
 			continue
 		}
-		stemWord := t.stemmer(word)
+		stemWord := word
+		if t.stemmer != nil {
+			stemWord = t.stemmer(word)
+		}
 		wordToPositions[stemWord] = append(wordToPositions[stemWord], index)
 		index++
 	}
@@ -65,12 +72,18 @@ func (t Tokenizer) Tokenize(content string) []*Token {
 			}
 		}
 	}
+	for _, t := range result {
+		newPositions := make([]uint32, len(t.Positions))
+		for i, p := range t.Positions {
+			newPositions[i] = p + uint32(offset)
+		}
+	}
 	return result
 }
 
-func (t Tokenizer) TokenizeToMap(content string) (tokenMap map[string]*Token, wordCount int) {
+func (t Tokenizer) TokenizeToMap(content string, offset int) (tokenMap map[string]*Token, wordCount int) {
 	tokenMap = make(map[string]*Token)
-	tokens := t.Tokenize(content)
+	tokens := t.Tokenize(content, offset)
 	for _, token := range tokens {
 		tokenMap[token.Word] = token
 	}
