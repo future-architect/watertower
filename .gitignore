@@ -6,10 +6,13 @@
 *.dylib
 .idea
 *.db
+*.idx
 samples/httpstatus/httpstatus
 samples/httpstatus/httpstatus.exe
 cmd/watertower-server/watertower-server
 cmd/watertower-server/watertower-server.exe
+cmd/watertower-cli/watertower-cli
+cmd/watertower-cli/watertower-cli.exe
 
 # Test binary, build with `go test -c`
 *.test
@@ -18,3 +21,5 @@ cmd/watertower-server/watertower-server.exe
 *.out
 
 wiser*
+
+.DS_Store

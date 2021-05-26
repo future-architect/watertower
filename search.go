@@ -34,7 +34,7 @@ func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*
 		return nil, nil
 	}
 
-	errGroup, ctx := errgroup.WithContext(wt.ctx)
+	errGroup, ctx := errgroup.WithContext(wt.storage.Context())
 	var tagDocIDGroups [][]uint32
 
 	if len(tags) > 0 {
@@ -56,7 +56,7 @@ func (wt *WaterTower) Search(searchWord string, tags []string, lang string) ([]*
 	var docCount int
 
 	errGroup.Go(func() (err error) {
-		docCount, err = wt.counter.Get(ctx, documentCount)
+		docCount, err = wt.storage.DocCount()
 		return
 	})
 

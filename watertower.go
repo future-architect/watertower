@@ -4,20 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/future-architect/gocloudurls"
-	"github.com/shibukawa/cloudcounter"
 	"gocloud.dev/docstore"
 	_ "gocloud.dev/pubsub/mempubsub"
 )
 
 type WaterTower struct {
-	ctx             context.Context
-	collection      *docstore.Collection
-	counter         *cloudcounter.Counter
+	storage         Storage
 	close           sync.Once
 	defaultLanguage string
 }
@@ -32,10 +30,11 @@ type Option struct {
 	DefaultLanguage    string
 }
 
-const (
-	documentID    cloudcounter.CounterKey = "document_id"
-	documentCount                         = "document_count"
-)
+type ReadOnlyOption struct {
+	Input           io.Reader
+	TitleScoreRatio float64
+	DefaultLanguage string
+}
 
 func DefaultCollectionOpener(ctx context.Context, opt Option) (*docstore.Collection, error) {
 	url, err := defaultCollectionURL(opt)
@@ -85,9 +84,6 @@ func initOpt(opt ...Option) (Option, error) {
 	if option.DocumentUrl == "" {
 		option.DocumentUrl = os.Getenv("WATERTOWER_DOCUMENT_URL")
 	}
-	if option.DocumentUrl == "" {
-		return option, errors.New("NewInvertedIndex: DocumentUrl is missign")
-	}
 	if option.TitleScoreRatio == 0.0 {
 		option.TitleScoreRatio = 5.0
 	}
@@ -103,41 +99,57 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	if err != nil {
 		return nil, err
 	}
-	if option.CollectionOpener == nil {
-		option.CollectionOpener = DefaultCollectionOpener
-	}
 	result := &WaterTower{
-		ctx: ctx,
 		defaultLanguage: option.DefaultLanguage,
 	}
-	collection, err := option.CollectionOpener(ctx, option)
-	if err != nil {
-		return nil, err
-	}
-	result.collection = collection
-	result.counter = cloudcounter.NewCounter(collection, cloudcounter.Option{
-		Concurrency: option.CounterConcurrency,
-		Prefix:      option.Index + "c",
-	})
-	err = result.counter.Register(ctx, documentID)
-	if err != nil {
-		return nil, err
-	}
-	err = result.counter.Register(ctx, documentCount)
-	if err != nil {
-		return nil, err
+	if option.DocumentUrl != "" {
+		if option.CollectionOpener == nil && option.DocumentUrl != "" {
+			option.CollectionOpener = DefaultCollectionOpener
+		}
+		c, err := option.CollectionOpener(ctx, option)
+		if err != nil {
+			return nil, err
+		}
+		s, err := newDocstoreStorage(ctx, c, option.Index, option.CounterConcurrency)
+		if err != nil {
+			return nil, err
+		}
+		result.storage = s
+	} else {
+		result.storage = newLocalIndex()
 	}
 	go func() {
 		<-ctx.Done()
-		result.Close()
+		result.storage.Close()
 	}()
 	return result, nil
 }
 
+func NewReadOnlyWaterTower(ctx context.Context, opt ...ReadOnlyOption) (*WaterTower, error) {
+	var opt2 Option
+	var input io.Reader
+	if len(opt) > 0 {
+		opt2.TitleScoreRatio = opt[0].TitleScoreRatio
+		opt2.DefaultLanguage = opt[0].DefaultLanguage
+		input = opt[0].Input
+	}
+	wt, err := NewWaterTower(ctx, opt2)
+	if err != nil {
+		return nil, fmt.Errorf("open WaterTower error: %w", err)
+	}
+
+	err = wt.storage.ReadIndex(input)
+	if err != nil {
+		return nil, fmt.Errorf("load index error: %w", err)
+	}
+	return wt, nil
+}
+
 // Close closes document store connection. Some docstore (at least memdocstore) needs Close() to store file
 func (wt *WaterTower) Close() (err error) {
-	wt.close.Do(func() {
-		err = wt.collection.Close()
-	})
-	return
+	return wt.storage.Close()
+}
+
+func (wt *WaterTower) WriteIndex(w io.Writer) error {
+	return wt.storage.WriteIndex(w)
 }

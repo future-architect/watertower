@@ -89,9 +89,9 @@ func Test_analyzeDocumentWithNgram(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		args args
-		wantTokens int
+		name          string
+		args          args
+		wantTokens    int
 		wantWordCount int
 	}{
 		{
@@ -99,7 +99,7 @@ func Test_analyzeDocumentWithNgram(t *testing.T) {
 			args: args{
 				content: "G",
 			},
-			wantTokens: 1,
+			wantTokens:    1,
 			wantWordCount: 1,
 		},
 		{
@@ -107,7 +107,7 @@ func Test_analyzeDocumentWithNgram(t *testing.T) {
 			args: args{
 				content: "Go",
 			},
-			wantTokens: 1 + 2,
+			wantTokens:    1 + 2,
 			wantWordCount: 1,
 		},
 	}
@@ -158,8 +158,8 @@ func Test_PostDocumentWithNgram(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		args args
+		name  string
+		args  args
 		found bool
 	}{
 		{
@@ -188,8 +188,8 @@ func Test_PostDocumentWithNgram(t *testing.T) {
 
 func Test_PostDocumentWithDefaultLanguage(t *testing.T) {
 	wt, err := NewWaterTower(context.Background(), Option{
-		Index:       xid.New().String(),
-		DocumentUrl: "mem://",
+		Index:           xid.New().String(),
+		DocumentUrl:     "mem://",
 		DefaultLanguage: "en",
 	})
 	assert.Nil(t, err)
@@ -213,8 +213,8 @@ func Test_PostDocumentWithDefaultLanguage(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		args args
+		name  string
+		args  args
 		found bool
 	}{
 		{

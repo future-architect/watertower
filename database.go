@@ -11,7 +11,6 @@ import (
 	_ "github.com/future-architect/watertower/nlp/bigram"
 	_ "github.com/future-architect/watertower/nlp/unigram"
 	"github.com/shibukawa/compints"
-	"gocloud.dev/docstore"
 )
 
 // PostDocument registers single document to storage and update index
@@ -63,42 +62,43 @@ func (wt *WaterTower) postDocumentKey(uniqueKey string) (uint32, error) {
 	existingDocKey := documentKey{
 		ID: id,
 	}
-	err := wt.collection.Get(wt.ctx, &existingDocKey)
+	err := wt.storage.GetDocKey(&existingDocKey)
 	if err == nil {
 		return existingDocKey.DocumentID, nil
 	}
-	newID, err := wt.counter.Increment(wt.ctx, documentID)
+	newID, err := wt.storage.IncrementDocID()
 	if err != nil {
 		return 0, err
 	}
-	err = wt.collection.Create(wt.ctx, &documentKey{
+	key := &documentKey{
 		ID:         id,
 		DocumentID: uint32(newID),
-	})
+	}
+	err = wt.storage.Create(id, key)
 	if err != nil {
 		return 0, err
 	}
 	return uint32(newID), nil
 }
 
-func (wt *WaterTower) postDocumentBody(docID uint32, uniqueKey string, wordCount, titleWordCount int, document *Document) (*Document, error) {
+func (wt *WaterTower) postDocumentBody(docID uint32, uniqueKey string, wordCount, titleWordCount int, doc *Document) (*Document, error) {
 	idStr := "d" + strconv.FormatUint(uint64(docID), 16)
 	existingDocument := Document{
 		ID: idStr,
 	}
-	document.ID = idStr
-	document.UniqueKey = uniqueKey
-	document.WordCount = wordCount
-	document.TitleWordCount = titleWordCount
-	err := wt.collection.Get(wt.ctx, &existingDocument)
+	doc.ID = idStr
+	doc.UniqueKey = uniqueKey
+	doc.WordCount = wordCount
+	doc.TitleWordCount = titleWordCount
+	err := wt.storage.GetDoc(&existingDocument)
 	if err != nil {
-		_, err = wt.counter.Increment(wt.ctx, documentCount)
+		_, err = wt.storage.IncrementDocCount()
 		if err != nil {
 			return nil, err
 		}
-		return nil, wt.collection.Create(wt.ctx, document)
+		return nil, wt.storage.Create(idStr, doc)
 	} else {
-		return &existingDocument, wt.collection.Replace(wt.ctx, document)
+		return &existingDocument, wt.storage.Replace(idStr, doc)
 	}
 }
 
@@ -108,15 +108,15 @@ func (wt *WaterTower) RemoveDocumentByKey(uniqueKey string) error {
 	if err != nil {
 		return err
 	}
-	err = wt.collection.Delete(wt.ctx, existingDocKey)
+	err = wt.storage.DeleteDocKey(existingDocKey)
 	if err != nil {
 		return err
 	}
-	err = wt.collection.Delete(wt.ctx, oldDoc)
+	err = wt.storage.DeleteDoc(oldDoc)
 	if err != nil {
 		return err
 	}
-	err = wt.counter.Decrement(wt.ctx, documentCount)
+	err = wt.storage.DecrementDocCount()
 	if err != nil {
 		return err
 	}
@@ -136,15 +136,15 @@ func (wt *WaterTower) RemoveDocumentByID(docID uint32) error {
 	existingDocKey := documentKey{
 		ID: "k" + docs[0].UniqueKey,
 	}
-	err = wt.collection.Delete(wt.ctx, existingDocKey)
+	err = wt.storage.DeleteDocKey(&existingDocKey)
 	if err != nil {
 		return err
 	}
-	err = wt.collection.Delete(wt.ctx, docs[0])
+	err = wt.storage.DeleteDoc(docs[0])
 	if err != nil {
 		return err
 	}
-	err = wt.counter.Decrement(wt.ctx, documentCount)
+	err = wt.storage.DecrementDocCount()
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (wt *WaterTower) analyzeDocumentWithLanguage(label string, document *Docume
 		return nil, nil, 0, 0, fmt.Errorf("Cannot find tokenizer for %s document: lang=%s, err=%w", label, document.Language, err)
 	}
 	tokens, titleWordCount = tokenizer.TokenizeToMap(document.Title, offset)
-	bodyTokens, wordCount := tokenizer.TokenizeToMap(document.Content, offset + titleWordCount + 1)
+	bodyTokens, wordCount := tokenizer.TokenizeToMap(document.Content, offset+titleWordCount+1)
 	for k, v := range bodyTokens {
 		tokens[k] = v
 	}
@@ -298,20 +298,20 @@ func (wt *WaterTower) addTagToDocumentID(tag string, docID uint32) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("fail to update tag: %w", lastError)
+	return fmt.Errorf("fail to add tag: %w", lastError)
 }
 
 func (wt *WaterTower) tryAddingDocumentToTag(tag string, docID uint32) error {
 	existingTag := tagEntity{
 		ID: "t" + tag,
 	}
-	err := wt.collection.Get(wt.ctx, &existingTag)
+	err := wt.storage.GetTag(&existingTag)
 	if err != nil {
 		tag := tagEntity{
 			ID:          "t" + tag,
 			DocumentIDs: compints.CompressToBytes([]uint32{docID}, true),
 		}
-		return wt.collection.Create(wt.ctx, &tag)
+		return wt.storage.Create(tag.ID, &tag)
 	} else {
 		docIDs, err := compints.DecompressFromBytes(existingTag.DocumentIDs, true)
 		if err != nil {
@@ -325,7 +325,7 @@ func (wt *WaterTower) tryAddingDocumentToTag(tag string, docID uint32) error {
 			ID:          "t" + tag,
 			DocumentIDs: compints.CompressToBytes(docIDs, true),
 		}
-		err = wt.collection.Replace(wt.ctx, newTag)
+		err = wt.storage.Replace(newTag.ID, newTag)
 		if err != nil {
 			return fmt.Errorf("fail to replace tag: '%s': %w", tag, err)
 		}
@@ -344,14 +344,14 @@ func (wt *WaterTower) RemoveDocumentFromTag(tag string, docID uint32) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("fail to update tag: %w", lastError)
+	return fmt.Errorf("fail to remove tag: %w", lastError)
 }
 
 func (wt *WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 	existingTag := tagEntity{
 		ID: "t" + tag,
 	}
-	err := wt.collection.Get(wt.ctx, &existingTag)
+	err := wt.storage.GetTag(&existingTag)
 	if err != nil {
 		return err
 	}
@@ -366,14 +366,14 @@ func (wt *WaterTower) removeDocumentFromTag(tag string, docID uint32) error {
 		}
 	}
 	if len(newDocIDs) == 0 {
-		return wt.collection.Delete(wt.ctx, &existingTag)
+		return wt.storage.DeleteTag(&existingTag)
 	} else {
 		newTag := &tagEntity{
 			ID:          "t" + tag,
 			DocumentIDs: compints.CompressToBytes(newDocIDs, true),
 		}
 		existingTag.DocumentIDs = compints.CompressToBytes(newDocIDs, true)
-		return wt.collection.Replace(wt.ctx, newTag)
+		return wt.storage.Replace(newTag.ID, newTag)
 	}
 }
 
@@ -388,14 +388,14 @@ func (wt *WaterTower) addDocumentToToken(word string, docID uint32, positions []
 		}
 		return nil
 	}
-	return fmt.Errorf("fail to update tag: %w", lastError)
+	return fmt.Errorf("fail to add token to doc: %w", lastError)
 }
 
 func (wt *WaterTower) addDocumentIDToToken(word string, docID uint32, positions []uint32) error {
 	existingToken := tokenEntity{
 		ID: "w" + word,
 	}
-	err := wt.collection.Get(wt.ctx, &existingToken)
+	err := wt.storage.GetToken(&existingToken)
 	pe := postingEntity{
 		DocumentID: docID,
 		Positions:  compints.CompressToBytes(positions, true),
@@ -405,7 +405,7 @@ func (wt *WaterTower) addDocumentIDToToken(word string, docID uint32, positions 
 			ID:       "w" + word,
 			Postings: []postingEntity{pe},
 		}
-		return wt.collection.Create(wt.ctx, &token)
+		return wt.storage.Create(token.ID, &token)
 	} else {
 		newToken := tokenEntity{
 			ID:       "w" + word,
@@ -414,7 +414,7 @@ func (wt *WaterTower) addDocumentIDToToken(word string, docID uint32, positions 
 		sort.Slice(newToken.Postings, func(i, j int) bool {
 			return newToken.Postings[i].DocumentID < newToken.Postings[j].DocumentID
 		})
-		err = wt.collection.Replace(wt.ctx, &newToken)
+		err = wt.storage.Replace(newToken.ID, &newToken)
 		if err != nil {
 			return fmt.Errorf("fail to replace token: '%s': %w", word, err)
 		}
@@ -433,14 +433,14 @@ func (wt *WaterTower) removeDocumentFromToken(word string, docID uint32) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("fail to update tag: %w", lastError)
+	return fmt.Errorf("fail to remove token from doc: %w", lastError)
 }
 
 func (wt *WaterTower) removeDocumentIDFromToken(word string, docID uint32) error {
 	existingToken := tokenEntity{
 		ID: "w" + word,
 	}
-	err := wt.collection.Get(wt.ctx, &existingToken)
+	err := wt.storage.GetToken(&existingToken)
 	if err != nil {
 		return err
 	} else {
@@ -451,32 +451,32 @@ func (wt *WaterTower) removeDocumentIDFromToken(word string, docID uint32) error
 			}
 		}
 		if len(newPostings) == 0 {
-			return wt.collection.Delete(wt.ctx, &existingToken)
+			return wt.storage.DeleteToken(&existingToken)
 		} else {
 			newToken := tokenEntity{
 				ID:       "w" + word,
 				Postings: newPostings,
 			}
-			return wt.collection.Replace(wt.ctx, &newToken)
+			return wt.storage.Replace(newToken.ID, &newToken)
 		}
 	}
 }
 
 func (wt *WaterTower) FindTags(tagNames ...string) ([]*tag, error) {
-	return wt.FindTagsWithContext(wt.ctx, tagNames...)
+	return wt.FindTagsWithContext(wt.storage.Context(), tagNames...)
 }
 
 func (wt *WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...string) ([]*tag, error) {
 	if len(tagNames) == 0 {
 		return nil, nil
 	}
-	existingTags := make([]tagEntity, len(tagNames))
-	actions := wt.collection.Actions()
+	existingTags := make([]*tagEntity, len(tagNames))
 	for i, tagName := range tagNames {
-		existingTags[i].ID = "t" + tagName
-		actions = actions.Get(&existingTags[i])
+		existingTags[i] = &tagEntity{
+			ID: "t" + tagName,
+		}
 	}
-	err := actions.Do(ctx)
+	_, err := wt.storage.BatchTagGet(ctx, existingTags)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +495,7 @@ func (wt *WaterTower) FindTagsWithContext(ctx context.Context, tagNames ...strin
 }
 
 func (wt *WaterTower) FindTokens(words ...string) ([]*token, error) {
-	return wt.FindTokensWithContext(wt.ctx, words...)
+	return wt.FindTokensWithContext(wt.storage.Context(), words...)
 }
 
 func (wt *WaterTower) FindTokensWithContext(ctx context.Context, words ...string) ([]*token, error) {
@@ -506,18 +506,13 @@ func (wt *WaterTower) FindTokensWithContext(ctx context.Context, words ...string
 	for i, word := range words {
 		positions[word] = append(positions[word], i)
 	}
-	existingTokens := make([]tokenEntity, len(positions))
-	actions := wt.collection.Actions()
+	existingTokens := make([]*tokenEntity, len(positions))
 	for i, word := range words {
-		existingTokens[i].ID = "w" + word
-		actions = actions.Get(&existingTokens[i])
-	}
-	hasErrors := make(map[int]bool)
-	if errs, ok := actions.Do(ctx).(docstore.ActionListError); ok {
-		for _, err := range errs {
-			hasErrors[err.Index] = true
+		existingTokens[i] = &tokenEntity{
+			ID: "w" + word,
 		}
 	}
+	hasErrors, _ := wt.storage.BatchTokenGet(ctx, existingTokens)
 	result := make([]*token, len(words))
 	for i, existingToken := range existingTokens {
 		token := &token{
@@ -546,19 +541,20 @@ func (wt *WaterTower) FindDocuments(ids ...uint32) ([]*Document, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	result := make([]*Document, len(ids))
-	actions := wt.collection.Actions()
+	docs := make([]*Document, len(ids))
+
 	for i, id := range ids {
-		result[i] = &Document{
+		doc := &Document{
 			ID: "d" + strconv.FormatUint(uint64(id), 16),
 		}
-		actions = actions.Get(result[i])
+		docs[i] = doc
 	}
-	err := actions.Do(wt.ctx)
+	_, err := wt.storage.BatchDocGet(wt.storage.Context(), docs)
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+
+	return docs, nil
 }
 
 // FindDocumentByKey looks up document by uniqueKey.
@@ -571,7 +567,7 @@ func (wt *WaterTower) findDocumentByKey(uniqueKey string) (uint32, *documentKey,
 	existingDocKey := documentKey{
 		ID: "k" + uniqueKey,
 	}
-	err := wt.collection.Get(wt.ctx, &existingDocKey)
+	err := wt.storage.GetDocKey(&existingDocKey)
 	if err != nil {
 		return 0, nil, nil, err
 	}
@@ -579,7 +575,7 @@ func (wt *WaterTower) findDocumentByKey(uniqueKey string) (uint32, *documentKey,
 	oldDoc := Document{
 		ID: "d" + strconv.FormatUint(uint64(docID), 16),
 	}
-	err = wt.collection.Get(wt.ctx, &oldDoc)
+	err = wt.storage.GetDoc(&oldDoc)
 	if err != nil {
 		return 0, nil, nil, err
 	}

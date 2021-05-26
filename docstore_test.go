@@ -23,10 +23,10 @@ func TestDocStoreConflict(t *testing.T) {
 		Content: "test",
 	}
 	// first create
-	err = wt.collection.Create(wt.ctx, doc)
+	err = wt.storage.Create(doc.ID, doc)
 	assert.Nil(t, err)
 	// second create
-	err = wt.collection.Create(wt.ctx, doc)
+	err = wt.storage.Create(doc.ID, doc)
 	assert.Error(t, err)
 }
 
@@ -43,7 +43,7 @@ func TestDocStoreNotFound(t *testing.T) {
 		ID: "1",
 	}
 
-	err = wt.collection.Get(wt.ctx, doc)
+	err = wt.storage.Get(doc.ID, doc)
 	t.Log(err)
 	assert.Error(t, err)
 }
@@ -70,6 +70,6 @@ func TestDocStore_Close(t *testing.T) {
 	doc2 := &Document{
 		ID: strconv.FormatUint(uint64(id), 10),
 	}
-	wt2.collection.Get(context.Background(), doc2)
+	wt2.storage.Get(doc2.ID, doc2)
 	assert.Equal(t, "", doc2.Content)
 }
