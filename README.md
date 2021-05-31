@@ -91,6 +91,22 @@ to process search word.
 docs, err := wt.Search(searchWord, tags, lang)
 ```
 
+To use local index file, open watertower instance without DocumentUrl option.
+
+Then call ``ReadIndex(r io.Reader)`` for/and ``WriteIndex(w io.Writer)`` to read/store index:
+
+```go
+f, err := os.Open("watertower.idx")
+if err != nil {
+	panic(err)
+}
+
+wt, err := watertower.NewWaterTower(ctx, watertower.Option{
+    DefaultLanguage: *defaultLanguage,
+})
+wt.ReadIndex(f)
+```
+
 ### Sample Codes
 
 #### httpstatus in /samples/httpstatus
@@ -129,6 +145,34 @@ $ curl -X GET "http://127.0.0.1:8888/index/_search"
   -d '{"query": {"bool": {"must": {"match_phrase": {"content": {"query": "stay", "analyzer": "en"}}}}}}'
 (...)
 ```
+
+## CLI tool
+
+CLI tool ``watertower-cli`` in ``/cmd/watertower-cli``.
+
+```shell
+$ ./watertower-cli --help
+usage: watertower-cli [<flags>] <command> [<args> ...]
+
+Flags:
+  --help  Show context-sensitive help (also try --help-long and --help-man).
+  --default-language=DEFAULT-LANGUAGE  
+          Default language
+
+Commands:
+  help [<command>...]
+    Show help.
+
+  create-index [<flags>] <INPUT>
+    Generate Index
+
+  search [<flags>] [<WORDS>...]
+    Search
+```
+
+It can create single file index by using ``create-index`` sub command.
+
+You can try searching the index file with ``search`` sub command.
 
 ## License
 

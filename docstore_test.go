@@ -43,7 +43,7 @@ func TestDocStoreNotFound(t *testing.T) {
 		ID: "1",
 	}
 
-	err = wt.storage.Get(doc.ID, doc)
+	err = wt.storage.GetDoc(doc)
 	t.Log(err)
 	assert.Error(t, err)
 }
@@ -70,6 +70,6 @@ func TestDocStore_Close(t *testing.T) {
 	doc2 := &Document{
 		ID: strconv.FormatUint(uint64(id), 10),
 	}
-	wt2.storage.Get(doc2.ID, doc2)
+	wt2.storage.GetDoc(doc2)
 	assert.Equal(t, "", doc2.Content)
 }

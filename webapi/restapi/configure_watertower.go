@@ -10,26 +10,28 @@ import (
 	"github.com/go-openapi/swag"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/future-architect/watertower/webapi/restapi/operations"
 	_ "github.com/future-architect/watertower/nlp/english"
 	_ "github.com/future-architect/watertower/nlp/japanese"
+	"github.com/future-architect/watertower/webapi/restapi/operations"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 
-	_ "gocloud.dev/docstore/memdocstore"
 	_ "gocloud.dev/docstore/awsdynamodb"
 	_ "gocloud.dev/docstore/gcpfirestore"
+	_ "gocloud.dev/docstore/memdocstore"
 	_ "gocloud.dev/docstore/mongodocstore"
 )
 
 //go:generate swagger generate server --target ../../webapi --name Watertower --spec ../../swagger.yaml
 
 var watertowerOptions = struct {
-	Indexes     string `long:"indexes" description:"Comma separated search index name. Default value is 'index' or WATERTOWER_INDEXES envvar"`
-	DocumentUrl string `long:"document-url" description:"Document URLs like firestore://my-project/my-documents, dynamo://, mongo. Default value is 'mem://' or WATERTOWER_DOCUMENT_URL envvar."`
-	DryRun      bool   `long:"dump-collection-urls" description:"Dump collection urls to be initialized before running server."`
+	Indexes         string `long:"indexes" description:"Comma separated search index name. Default value is 'index' or WATERTOWER_INDEXES envvar"`
+	DocumentUrl     string `long:"document-url" description:"Document URLs like firestore://my-project/my-documents, dynamo://, mongo. Default value is 'mem://' or WATERTOWER_DOCUMENT_URL envvar."`
+	DryRun          bool   `long:"dump-collection-urls" description:"Dump collection urls to be initialized before running server."`
+	DefaultLanguage string `long:"default-language" description:"Language code when user request doesn't have language request. Default value is 'en' or WATERTOWER_DEFAULT_LANGUAGE'"`
 }{}
 
 var watertowers = map[string]*watertower.WaterTower{}
@@ -45,6 +47,7 @@ func configureFlags(api *operations.WatertowerAPI) {
 }
 
 func configureAPI(api *operations.WatertowerAPI) http.Handler {
+	var filePath string
 	if watertowerOptions.Indexes == "" {
 		watertowerOptions.Indexes = os.Getenv("WATERTOWER_INDEXES")
 		if watertowerOptions.Indexes == "" {
@@ -57,17 +60,40 @@ func configureAPI(api *operations.WatertowerAPI) http.Handler {
 			watertowerOptions.DocumentUrl = "mem://"
 		}
 	}
+	if strings.HasPrefix(watertowerOptions.DocumentUrl, "file://") {
+		filePath = filepath.FromSlash(strings.TrimPrefix(watertowerOptions.DocumentUrl, "file://"))
+		watertowerOptions.DocumentUrl = ""
+	}
+	if watertowerOptions.DefaultLanguage == "" {
+		watertowerOptions.DefaultLanguage = os.Getenv("WATERTOWER_DEFAULT_LANGUAGE")
+		if watertowerOptions.DefaultLanguage == "" {
+			watertowerOptions.DefaultLanguage = "en"
+		}
+
+	}
 	indexes := strings.Split(watertowerOptions.Indexes, ",")
 	if watertowerOptions.DryRun {
-		for _, index := range indexes {
-			url, err := watertower.DefaultCollectionURL(watertower.Option{
-				DocumentUrl: watertowerOptions.DocumentUrl,
-				Index:       index,
-			})
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error for index '%s': %v\n", index, err)
-			} else {
-				fmt.Printf("URL for '%s': %s\n", index, url)
+		if filePath != "" {
+			for _, index := range indexes {
+				indexFilePath := strings.ReplaceAll(filePath, "${index}", index)
+				stat, err := os.Stat(indexFilePath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Index file (%s) not found: %v\n", indexFilePath, err)
+				} else if stat.IsDir() {
+					fmt.Fprintf(os.Stderr, "Index file (%s) is directory.\n", indexFilePath)
+				}
+			}
+		} else {
+			for _, index := range indexes {
+				url, err := watertower.DefaultCollectionURL(watertower.Option{
+					DocumentUrl: watertowerOptions.DocumentUrl,
+					Index:       index,
+				})
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error for index '%s': %v\n", index, err)
+				} else {
+					fmt.Printf("URL for '%s': %s\n", index, url)
+				}
 			}
 		}
 		os.Exit(2)
@@ -76,22 +102,44 @@ func configureAPI(api *operations.WatertowerAPI) http.Handler {
 	ctx, cancel := context.WithCancel(context.Background())
 	hasError := false
 	for _, index := range indexes {
-		url, err := watertower.DefaultCollectionURL(watertower.Option{
-			DocumentUrl: watertowerOptions.DocumentUrl,
-			Index:       index,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error for index '%s': %v\n", index, err)
+		if filePath != "" {
+			indexFilePath := strings.ReplaceAll(filePath, "${index}", index)
+			r, err := os.Open(indexFilePath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot read index file (%s) not found: %v\n", indexFilePath, err)
+				hasError = true
+				continue
+			}
+			wt, err := watertower.NewWaterTower(ctx, watertower.Option{
+				DefaultLanguage: watertowerOptions.DefaultLanguage,
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error at initializing index '%s': err\n", index, err)
+				hasError = true
+				continue
+			}
+			wt.ReadIndex(r)
+			watertowers[index] = wt
+		} else {
+			url, err := watertower.DefaultCollectionURL(watertower.Option{
+				DocumentUrl:     watertowerOptions.DocumentUrl,
+				Index:           index,
+				DefaultLanguage: watertowerOptions.DefaultLanguage,
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error for index '%s': %v\n", index, err)
+			}
+			wt, err := watertower.NewWaterTower(ctx, watertower.Option{
+				DocumentUrl: watertowerOptions.DocumentUrl,
+				Index:       index,
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error at initializing index '%s' at %s: err\n", index, url, err)
+				hasError = true
+				continue
+			}
+			watertowers[index] = wt
 		}
-		wt, err := watertower.NewWaterTower(ctx, watertower.Option{
-			DocumentUrl: watertowerOptions.DocumentUrl,
-			Index:       index,
-		})
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error at initializing index '%s' at %s: err\n", index, url, err)
-			hasError = true
-		}
-		watertowers[index] = wt
 	}
 	if hasError {
 		fmt.Fprintln(os.Stderr, "Could not start watertower")

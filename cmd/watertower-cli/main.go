@@ -109,15 +109,20 @@ func search(ctx context.Context) error {
 		defer f.Close()
 		input = f
 	}
-	wt, err := watertower.NewReadOnlyWaterTower(ctx, watertower.ReadOnlyOption{
+	wt, err := watertower.NewWaterTower(ctx, watertower.Option{
 		DefaultLanguage: *defaultLanguage,
-		Input:           input,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "open index error: %s\n", err.Error())
 		return err
 	}
 	defer wt.Close()
+
+	err = wt.ReadIndex(input)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Parse data error: %s\n", err.Error())
+		return err
+	}
 
 	lang := *language
 	if lang == "" {

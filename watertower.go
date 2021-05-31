@@ -30,12 +30,6 @@ type Option struct {
 	DefaultLanguage    string
 }
 
-type ReadOnlyOption struct {
-	Input           io.Reader
-	TitleScoreRatio float64
-	DefaultLanguage string
-}
-
 func DefaultCollectionOpener(ctx context.Context, opt Option) (*docstore.Collection, error) {
 	url, err := defaultCollectionURL(opt)
 	if err != nil {
@@ -125,26 +119,6 @@ func NewWaterTower(ctx context.Context, opt ...Option) (*WaterTower, error) {
 	return result, nil
 }
 
-func NewReadOnlyWaterTower(ctx context.Context, opt ...ReadOnlyOption) (*WaterTower, error) {
-	var opt2 Option
-	var input io.Reader
-	if len(opt) > 0 {
-		opt2.TitleScoreRatio = opt[0].TitleScoreRatio
-		opt2.DefaultLanguage = opt[0].DefaultLanguage
-		input = opt[0].Input
-	}
-	wt, err := NewWaterTower(ctx, opt2)
-	if err != nil {
-		return nil, fmt.Errorf("open WaterTower error: %w", err)
-	}
-
-	err = wt.storage.ReadIndex(input)
-	if err != nil {
-		return nil, fmt.Errorf("load index error: %w", err)
-	}
-	return wt, nil
-}
-
 // Close closes document store connection. Some docstore (at least memdocstore) needs Close() to store file
 func (wt *WaterTower) Close() (err error) {
 	return wt.storage.Close()
@@ -152,4 +126,8 @@ func (wt *WaterTower) Close() (err error) {
 
 func (wt *WaterTower) WriteIndex(w io.Writer) error {
 	return wt.storage.WriteIndex(w)
+}
+
+func (wt *WaterTower) ReadIndex(w io.Reader) error {
+	return wt.storage.ReadIndex(w)
 }
