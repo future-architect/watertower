@@ -1,0 +1,34 @@
+FROM golang:1.16-buster as builder
+ENV GOPATH=
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+WORKDIR /work
+ADD go.mod go.sum ./
+RUN go mod download
+ADD cmd/watertower-aws-lambda ./cmd/watertower-aws-lambda
+ADD *.go .
+ADD nlp nlp
+ADD webapi webapi
+RUN cd cmd/watertower-aws-lambda && go build -trimpath
+
+FROM golang:1.16-buster as indexer
+ENV GOPATH=
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+WORKDIR /work
+ADD go.mod go.sum ./
+RUN go mod download
+ADD cmd/watertower-cli ./cmd/watertower-cli
+ADD *.go .
+ADD nlp nlp
+RUN cd cmd/watertower-cli && go build -trimpath
+ADD samples/httpstatus/documents samples/httpstatus/documents
+RUN cmd/watertower-cli/watertower-cli create-index samples/httpstatus/documents
+
+FROM amazon/aws-lambda-go
+COPY --from=builder /work/cmd/watertower-aws-lambda/watertower-aws-lambda ${LAMBDA_TASK_ROOT}
+COPY --from=indexer /work/watertower.idx ${LAMBDA_TASK_ROOT}
+ENV DEFAULT_LANGUAGE=en
+CMD [ "watertower-aws-lambda" ]

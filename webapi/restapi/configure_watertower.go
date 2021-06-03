@@ -56,9 +56,6 @@ func configureAPI(api *operations.WatertowerAPI) http.Handler {
 	}
 	if watertowerOptions.DocumentUrl == "" {
 		watertowerOptions.DocumentUrl = os.Getenv("WATERTOWER_DOCUMENT_URL")
-		if watertowerOptions.DocumentUrl == "" {
-			watertowerOptions.DocumentUrl = "mem://"
-		}
 	}
 	if strings.HasPrefix(watertowerOptions.DocumentUrl, "file://") {
 		filePath = filepath.FromSlash(strings.TrimPrefix(watertowerOptions.DocumentUrl, "file://"))
